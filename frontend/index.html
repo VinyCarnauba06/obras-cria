@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0A0E27">
+  <title>Sistema de Supervisão de Obras</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/componentes.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>🏗️ Supervisor</h2>
+      <span class="badge-status" id="badgeStatus">●  Offline</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="obras">
+        <span class="nav-icon">📋</span>
+        <span>Obras</span>
+      </button>
+      <button class="nav-item" data-view="resumo">
+        <span class="nav-icon">📊</span>
+        <span>Resumo</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-primario btn-full" id="btnNovaObra">
+        + Nova Obra
+      </button>
+    </div>
+  </aside>
+
+  <!-- Toggle Sidebar Mobile -->
+  <button class="toggle-sidebar" id="toggleSidebar">☰</button>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <!-- View: Lista de Obras -->
+    <section class="view-container" id="viewObras">
+      <header class="view-header">
+        <h1>Minhas Obras</h1>
+        <p class="view-subtitulo">Gerencie suas obras, tarefas e relatórios</p>
+      </header>
+
+      <div class="grid-obras" id="gridObras">
+        <!-- Cards de obras inseridos via JS -->
+      </div>
+
+      <div class="estado-vazio" id="estadoVazioObras" style="display: none;">
+        <div class="estado-vazio-icone">🏗️</div>
+        <h3>Nenhuma obra cadastrada</h3>
+        <p>Clique em "Nova Obra" para começar</p>
+      </div>
+    </section>
+
+    <!-- View: Detalhe da Obra -->
+    <section class="view-container" id="viewObraDetalhe" style="display: none;">
+      <header class="view-header">
+        <button class="btn-voltar" id="btnVoltarObras">← Voltar</button>
+        <div class="obra-header-info">
+          <h1 id="obraDetalheNome">Nome da Obra</h1>
+          <p id="obraDetalheEndereco">Endereço</p>
+        </div>
+        <div class="obra-header-acoes">
+          <button class="btn-icone" id="btnEditarObra" title="Editar Obra">✏️</button>
+          <button class="btn-icone btn-perigo" id="btnExcluirObra" title="Excluir Obra">🗑️</button>
+        </div>
+      </header>
+
+      <div class="abas">
+        <button class="aba ativa" data-aba="tarefas">Tarefas</button>
+        <button class="aba" data-aba="relatorios">Relatórios</button>
+      </div>
+
+      <!-- Aba Tarefas -->
+      <div class="aba-conteudo ativa" id="abaTarefas">
+        <div class="secao-header">
+          <h2>Tarefas</h2>
+          <button class="btn-primario" id="btnNovaTarefa">+ Nova Tarefa</button>
+        </div>
+        <div class="lista-tarefas" id="listaTarefas"></div>
+      </div>
+
+      <!-- Aba Relatórios -->
+      <div class="aba-conteudo" id="abaRelatorios">
+        <div class="secao-header">
+          <h2>Relatórios</h2>
+          <button class="btn-primario" id="btnNovoRelatorio">+ Novo Relatório</button>
+        </div>
+        <div class="lista-relatorios" id="listaRelatorios"></div>
+      </div>
+    </section>
+
+    <!-- View: Resumo -->
+    <section class="view-container" id="viewResumo" style="display: none;">
+      <header class="view-header">
+        <h1>Resumo Geral</h1>
+      </header>
+      <div class="grid-estatisticas" id="gridEstatisticas"></div>
+    </section>
+  </main>
+
+  <!-- MODAL: Obra (Novo/Editar) -->
+  <div class="modal" id="modalObra">
+    <div class="modal-conteudo">
+      <div class="modal-header">
+        <h2 id="modalObraTitulo">Nova Obra</h2>
+        <button class="btn-fechar" data-fechar-modal="modalObra">×</button>
+      </div>
+      <form class="modal-body" id="formObra">
+        <input type="hidden" id="obraId">
+        <div class="campo">
+          <label for="obraNome">Nome *</label>
+          <input type="text" id="obraNome" required maxlength="200" placeholder="Ex: Creche Municipal Vila Nova">
+        </div>
+        <div class="campo">
+          <label for="obraEndereco">Endereço *</label>
+          <input type="text" id="obraEndereco" required placeholder="Ex: Rua das Flores, 123 - Maceió/AL">
+        </div>
+        <div class="campo">
+          <label for="obraDescricao">Descrição</label>
+          <textarea id="obraDescricao" rows="4" placeholder="Detalhes da obra..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secundario" data-fechar-modal="modalObra">Cancelar</button>
+          <button type="submit" class="btn-primario">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Tarefa (Novo/Editar) -->
+  <div class="modal" id="modalTarefa">
+    <div class="modal-conteudo">
+      <div class="modal-header">
+        <h2 id="modalTarefaTitulo">Nova Tarefa</h2>
+        <button class="btn-fechar" data-fechar-modal="modalTarefa">×</button>
+      </div>
+      <form class="modal-body" id="formTarefa">
+        <input type="hidden" id="tarefaId">
+        <div class="campo">
+          <label for="tarefaDescricao">Descrição *</label>
+          <textarea id="tarefaDescricao" rows="3" required placeholder="O que precisa ser feito?"></textarea>
+        </div>
+        <div class="campo">
+          <label for="tarefaStatus">Status</label>
+          <select id="tarefaStatus">
+            <option value="nao-iniciada">Não Iniciada</option>
+            <option value="em-andamento">Em Andamento</option>
+            <option value="concluida">Concluída</option>
+            <option value="nao-executada">Não Executada</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="tarefaObservacoes">Observações</label>
+          <textarea id="tarefaObservacoes" rows="3" placeholder="Observações adicionais..."></textarea>
+        </div>
+        <div class="campo">
+          <label for="tarefaMotivoAtraso">Motivo do Atraso</label>
+          <textarea id="tarefaMotivoAtraso" rows="2" placeholder="Se houver atraso, qual o motivo?"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-perigo" id="btnExcluirTarefa" style="display:none;">Excluir</button>
+          <div style="flex:1;"></div>
+          <button type="button" class="btn-secundario" data-fechar-modal="modalTarefa">Cancelar</button>
+          <button type="submit" class="btn-primario">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Relatório (Novo) -->
+  <div class="modal" id="modalRelatorio">
+    <div class="modal-conteudo modal-grande">
+      <div class="modal-header">
+        <h2 id="modalRelatorioTitulo">Novo Relatório</h2>
+        <button class="btn-fechar" data-fechar-modal="modalRelatorio">×</button>
+      </div>
+      <form class="modal-body" id="formRelatorio">
+        <input type="hidden" id="relatorioId">
+        <div class="campo-grid">
+          <div class="campo">
+            <label for="relatorioData">Data *</label>
+            <input type="date" id="relatorioData" required>
+          </div>
+          <div class="campo">
+            <label for="relatorioSupervisor">Supervisor</label>
+            <input type="text" id="relatorioSupervisor" value="Maurício Carnaúba">
+          </div>
+        </div>
+        <div class="campo">
+          <label for="relatorioEndereco">Local / Endereço</label>
+          <input type="text" id="relatorioEndereco" placeholder="Local da visita">
+        </div>
+        <div class="campo">
+          <label for="relatorioObservacao">Observação Geral</label>
+          <textarea id="relatorioObservacao" rows="4" placeholder="Descreva o progresso, ocorrências..."></textarea>
+        </div>
+
+        <div class="secao-fotos">
+          <div class="secao-header-fotos">
+            <h3>📷 Fotos</h3>
+            <div class="botoes-foto">
+              <button type="button" class="btn-secundario" id="btnCapturarFoto">📸 Câmera</button>
+              <button type="button" class="btn-secundario" id="btnSelecionarFoto">📁 Arquivos</button>
+              <input type="file" id="inputFotos" accept="image/*" multiple hidden>
+              <input type="file" id="inputCamera" accept="image/*" capture="environment" hidden>
+            </div>
+          </div>
+          <div class="grid-fotos" id="gridFotos"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secundario" data-fechar-modal="modalRelatorio">Cancelar</button>
+          <button type="button" class="btn-secundario" id="btnGerarPDF">📄 Gerar PDF</button>
+          <button type="submit" class="btn-primario">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- MODAL: EDITAR OBSERVAÇÃO DA FOTO -->
+<div class="modal" id="modalEditarFoto">
+  <div class="modal-conteudo">
+    <div class="modal-header">
+      <h2>Observação da Foto</h2>
+      <button class="btn-fechar" data-fechar-modal="modalEditarFoto">×</button>
+    </div>
+    <form class="modal-body" id="formEditarFoto">
+      <input type="hidden" id="editarFotoId">
+      <div class="campo">
+        <label for="editarFotoObservacao">Observação</label>
+        <textarea id="editarFotoObservacao" rows="3" placeholder="Detalhe sobre esta foto..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secundario" data-fechar-modal="modalEditarFoto">Cancelar</button>
+        <button type="submit" class="btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <!-- MODAL: Editar Relatório (rápido) -->
+  <div class="modal" id="modalEditarRelatorio">
+    <div class="modal-conteudo">
+      <div class="modal-header">
+        <h2>Editar Relatório</h2>
+        <button class="btn-fechar" data-fechar-modal="modalEditarRelatorio">×</button>
+      </div>
+      <form class="modal-body" id="formEditarRelatorio">
+        <input type="hidden" id="editarRelatorioId">
+        <div class="campo">
+          <label for="editarRelatorioData">Data *</label>
+          <input type="date" id="editarRelatorioData" required>
+        </div>
+        <div class="campo">
+          <label for="editarRelatorioEndereco">Local</label>
+          <input type="text" id="editarRelatorioEndereco">
+        </div>
+        <div class="campo">
+          <label for="editarRelatorioObservacao">Observação</label>
+          <textarea id="editarRelatorioObservacao" rows="4"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secundario" data-fechar-modal="modalEditarRelatorio">Cancelar</button>
+          <button type="submit" class="btn-primario">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts externos -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Scripts da aplicação -->
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/pdf.js"></script>
+  <script src="js/tarefas-manager.js"></script>
+  <script src="js/obra-resumo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

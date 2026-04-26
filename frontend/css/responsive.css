@@ -1,0 +1,144 @@
+/* ============================================
+   RESPONSIVE - TABLETS
+   ============================================ */
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 24px;
+  }
+
+  .grid-obras {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.aberta {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 16px;
+    padding-top: 72px;
+  }
+
+  .toggle-sidebar {
+    display: flex;
+  }
+
+  .view-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .obra-header-acoes {
+    justify-content: flex-end;
+  }
+
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.2rem; }
+
+  .grid-obras {
+    grid-template-columns: 1fr;
+  }
+
+  .campo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-conteudo {
+    max-height: 95vh;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    margin: 16px -16px -16px -16px;
+    flex-wrap: wrap;
+  }
+
+  .modal-footer button {
+    flex: 1;
+  }
+
+  .secao-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .item-tarefa,
+  .item-relatorio {
+    flex-wrap: wrap;
+  }
+
+  .botoes-foto {
+    flex: 1;
+  }
+
+  .botoes-foto button {
+    flex: 1;
+  }
+
+  .grid-fotos {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+
+  .toast-container {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .toast {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .abas {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .grid-estatisticas {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .card-estatistica-valor {
+    font-size: 1.8rem;
+  }
+}
+
+/* ============================================
+   RESPONSIVE - SMALL MOBILE
+   ============================================ */
+@media (max-width: 480px) {
+  .main-content {
+    padding: 12px;
+    padding-top: 68px;
+  }
+
+  .card-obra {
+    padding: 18px;
+  }
+
+  .modal-body {
+    padding: 14px;
+  }
+
+  .btn-primario,
+  .btn-secundario,
+  .btn-perigo {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+}

@@ -3,7 +3,7 @@
 // ============================================
 
 const api = {
-  baseURL: localStorage.getItem('API_BASE_URL') || 'http://localhost:5000/api',
+  baseURL: localStorage.getItem('API_BASE_URL') || 'https://obras-cria.onrender.com',
 
   setBaseURL(url) {
     this.baseURL = url;

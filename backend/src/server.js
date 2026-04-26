@@ -8,9 +8,15 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: [
+    'http://127.0.0.1:8080', 
+    'http://localhost:8080', 
+    'http://localhost:5173',
+    'https://obras-cria.vercel.app' // Já liberando o acesso para quando o Maurício for usar!
+  ],
   credentials: true
 }));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 

@@ -137,24 +137,62 @@ const ui = {
       return;
     }
 
-    lista.innerHTML = tarefas.map(t => {
-      const id = t._id || t.id;
+    const NOMES_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                         'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    // Agrupa por ano-mês de criação
+    const grupos = {};
+    for (const t of tarefas) {
+      const d = new Date(t.dataCriacao || t.createdAt || Date.now());
+      const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!grupos[chave]) grupos[chave] = [];
+      grupos[chave].push(t);
+    }
+
+    const mesesOrdenados = Object.keys(grupos).sort();
+
+    lista.innerHTML = mesesOrdenados.map((chave, idx) => {
+      const [ano, mes] = chave.split('-');
+      const nomeMes    = NOMES_MESES[parseInt(mes) - 1];
+      const grupo      = grupos[chave];
+
+      const itensHTML = grupo.map(t => {
+        const id = t._id || t.id;
+        return `
+          <div class="item-tarefa ${t.status}" data-tarefa-id="${id}">
+            <div class="tarefa-status-indicador ${t.status}"></div>
+            <div class="tarefa-info">
+              <div class="tarefa-descricao">${utils.escapeHTML(t.descricao)}</div>
+              ${t.observacoes ? `<div class="tarefa-meta">${utils.escapeHTML(t.observacoes)}</div>` : ''}
+            </div>
+            <span class="tarefa-status-badge ${t.status}">${utils.statusTexto(t.status)}</span>
+          </div>`;
+      }).join('');
+
       return `
-        <div class="item-tarefa" data-tarefa-id="${id}">
-          <div class="tarefa-status-indicador ${t.status}"></div>
-          <div class="tarefa-info">
-            <div class="tarefa-descricao">${utils.escapeHTML(t.descricao)}</div>
-            ${t.observacoes ? `<div class="tarefa-meta">${utils.escapeHTML(t.observacoes)}</div>` : ''}
+        <div class="accordion-mes aberto" data-mes="${chave}">
+          <div class="accordion-mes-header">
+            <div class="accordion-mes-titulo">
+              <span>Mês ${idx + 1} — ${nomeMes} ${ano}</span>
+              <span class="accordion-mes-badge">${grupo.length} tarefa${grupo.length !== 1 ? 's' : ''}</span>
+            </div>
+            <span class="accordion-mes-seta">▼</span>
           </div>
-          <span class="tarefa-status-badge ${t.status}">${utils.statusTexto(t.status)}</span>
-        </div>
-      `;
+          <div class="accordion-mes-corpo lista-tarefas">${itensHTML}</div>
+        </div>`;
     }).join('');
 
+    // Toggle accordion
+    lista.querySelectorAll('.accordion-mes-header').forEach(header => {
+      header.addEventListener('click', () => {
+        header.closest('.accordion-mes').classList.toggle('aberto');
+      });
+    });
+
+    // Click na tarefa
     lista.querySelectorAll('.item-tarefa').forEach(item => {
       item.addEventListener('click', () => {
-        const id = item.dataset.tarefaId;
-        tarefasManager.abrirEdicao(id);
+        tarefasManager.abrirEdicao(item.dataset.tarefaId);
       });
     });
   },

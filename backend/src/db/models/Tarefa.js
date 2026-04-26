@@ -22,7 +22,7 @@ const tarefaSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['nao-iniciada', 'em-andamento', 'concluida', 'nao-executada'],
+    enum: ['nao-iniciada', 'em-andamento', 'concluida', 'em-atraso'],
     default: 'nao-iniciada'
   },
   observacoes: {

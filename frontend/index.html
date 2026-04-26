@@ -81,9 +81,12 @@
       <div class="aba-conteudo ativa" id="abaTarefas">
         <div class="secao-header">
           <h2>Tarefas</h2>
-          <button class="btn-primario" id="btnNovaTarefa">+ Nova Tarefa</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-secundario" id="btnImportarPadrao">📋 Prog. Padrão</button>
+            <button class="btn-primario" id="btnNovaTarefa">+ Nova Tarefa</button>
+          </div>
         </div>
-        <div class="lista-tarefas" id="listaTarefas"></div>
+        <div id="listaTarefas"></div>
       </div>
 
       <!-- Aba Relatórios -->
@@ -153,7 +156,7 @@
             <option value="nao-iniciada">Não Iniciada</option>
             <option value="em-andamento">Em Andamento</option>
             <option value="concluida">Concluída</option>
-            <option value="nao-executada">Não Executada</option>
+            <option value="em-atraso">Em Atraso</option>
           </select>
         </div>
         <div class="campo">
@@ -200,6 +203,11 @@
         <div class="campo">
           <label for="relatorioObservacao">Observação Geral</label>
           <textarea id="relatorioObservacao" rows="4" placeholder="Descreva o progresso, ocorrências..."></textarea>
+        </div>
+
+        <div class="secao-tarefas-relatorio">
+          <h3>✅ Tarefas Ativas no Período</h3>
+          <div class="lista-checkboxes-tarefas" id="listaCheckboxesTarefas"></div>
         </div>
 
         <div class="secao-fotos">

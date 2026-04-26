@@ -15,6 +15,52 @@ router.get('/obras/:obraId/tarefas', async (req, res) => {
   }
 });
 
+// POST /api/obras/:obraId/tarefas/padrao  — bulk insert da programação padrão
+router.post('/obras/:obraId/tarefas/padrao', async (req, res) => {
+  const TAREFAS_PADRAO = [
+    'Terraplanagem do Terreno',
+    'Projetos na Obra',
+    'Sondagem',
+    'Topografia',
+    'Instalação de Conteiners/Almoxarifado',
+    'Tapumes e Portões',
+    'Placas de Segurança e de Obra',
+    'Área de Vivência / Refeitório',
+    'Escavação dos Muros e Muretas',
+    "Escavação Base do Castelo D'água",
+    "Execução/Concretagem da Base do Castelo D'água",
+    'Alvenaria Singela Muros e Muretas',
+    'Impermeabilização com Neutrol',
+    'Escavação Fundações dos Pilares',
+    'Concretagem Laje Radier'
+  ];
+
+  try {
+    const existentes = await Tarefa.countDocuments({ obraId: req.params.obraId, ativo: true });
+    if (existentes > 0) {
+      return res.status(409).json({ erro: 'Esta obra já possui tarefas cadastradas' });
+    }
+
+    const tarefas = TAREFAS_PADRAO.map(descricao => ({
+      obraId: req.params.obraId,
+      descricao,
+      status: 'nao-iniciada',
+      historico: [{
+        data: new Date(),
+        statusAnterior: null,
+        statusNovo: 'nao-iniciada',
+        mudancas: { criacao: true },
+        autor: 'Sistema'
+      }]
+    }));
+
+    const inseridas = await Tarefa.insertMany(tarefas);
+    res.status(201).json({ inseridas: inseridas.length, tarefas: inseridas });
+  } catch (error) {
+    res.status(400).json({ erro: error.message });
+  }
+});
+
 // POST /api/obras/:obraId/tarefas
 router.post('/obras/:obraId/tarefas', async (req, res) => {
   try {

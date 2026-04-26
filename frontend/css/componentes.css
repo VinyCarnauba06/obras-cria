@@ -278,7 +278,7 @@
 .item-tarefa.nao-iniciada::before  { background: var(--cor-texto-mutado); }
 .item-tarefa.em-andamento::before  { background: var(--cor-aviso); }
 .item-tarefa.concluida::before     { background: var(--cor-sucesso); }
-.item-tarefa.nao-executada::before { background: var(--cor-erro); }
+.item-tarefa.em-atraso::before { background: var(--cor-erro); }
 
 .item-tarefa:hover {
   border-color: rgba(124, 110, 250, 0.3);
@@ -301,7 +301,7 @@
   background: var(--cor-sucesso);
   box-shadow: 0 0 7px rgba(31, 208, 138, 0.55);
 }
-.tarefa-status-indicador.nao-executada {
+.tarefa-status-indicador.em-atraso {
   background: var(--cor-erro);
   box-shadow: 0 0 7px rgba(248, 113, 113, 0.55);
 }
@@ -351,7 +351,7 @@
   color: var(--cor-sucesso);
   border: 1px solid rgba(31, 208, 138, 0.2);
 }
-.tarefa-status-badge.nao-executada {
+.tarefa-status-badge.em-atraso {
   background: var(--cor-erro-dim);
   color: var(--cor-erro);
   border: 1px solid rgba(248, 113, 113, 0.2);
@@ -744,6 +744,158 @@
   font-size: 0.78rem;
   color: var(--cor-texto-mutado);
   margin-top: 7px;
+}
+
+/* ============================================
+   ACCORDION DE TAREFAS POR MÊS
+   ============================================ */
+.accordion-mes {
+  margin-bottom: 10px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-grande);
+  overflow: hidden;
+}
+
+.accordion-mes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  background: var(--cor-bg-secundario);
+  cursor: pointer;
+  user-select: none;
+  transition: var(--transicao);
+}
+
+.accordion-mes-header:hover {
+  background: var(--cor-bg-terciario);
+}
+
+.accordion-mes-titulo {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--cor-texto-primario);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.accordion-mes-badge {
+  font-size: 0.68rem;
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: rgba(124, 110, 250, 0.15);
+  color: var(--cor-destaque);
+  font-weight: 700;
+}
+
+.accordion-mes-seta {
+  color: var(--cor-texto-secundario);
+  transition: transform 0.22s ease;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.accordion-mes.aberto .accordion-mes-seta {
+  transform: rotate(180deg);
+}
+
+.accordion-mes-corpo {
+  display: none;
+  padding: 10px 12px 12px;
+  background: var(--cor-bg-primario);
+  border-top: 1px solid var(--cor-borda-leve);
+}
+
+.accordion-mes.aberto .accordion-mes-corpo {
+  display: block;
+}
+
+/* ============================================
+   CHECKBOXES DE TAREFAS NO MODAL RELATÓRIO
+   ============================================ */
+.secao-tarefas-relatorio {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.secao-tarefas-relatorio h3 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--cor-texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 12px;
+}
+
+.lista-checkboxes-tarefas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.checkbox-tarefa-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  background: var(--cor-bg-secundario);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-medio);
+  cursor: pointer;
+  transition: var(--transicao);
+}
+
+.checkbox-tarefa-item:hover {
+  border-color: rgba(124, 110, 250, 0.35);
+  background: var(--cor-bg-terciario);
+}
+
+.checkbox-tarefa-item input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--cor-destaque);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.checkbox-tarefa-label {
+  flex: 1;
+  font-size: 0.855rem;
+  color: var(--cor-texto-primario);
+  font-weight: 500;
+}
+
+.checkbox-tarefa-status {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.checkbox-tarefa-status.nao-iniciada {
+  background: rgba(56, 66, 104, 0.5);
+  color: var(--cor-texto-secundario);
+}
+.checkbox-tarefa-status.em-andamento {
+  background: var(--cor-aviso-dim);
+  color: var(--cor-aviso);
+}
+.checkbox-tarefa-status.concluida {
+  background: var(--cor-sucesso-dim);
+  color: var(--cor-sucesso);
+}
+.checkbox-tarefa-status.em-atraso {
+  background: var(--cor-erro-dim);
+  color: var(--cor-erro);
 }
 
 /* ============================================

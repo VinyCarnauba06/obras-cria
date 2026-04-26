@@ -266,7 +266,51 @@ const app = {
     document.getElementById('relatorioEndereco').value = obra?.endereco || '';
     document.getElementById('relatorioObservacao').value = '';
     camera.resetar();
+    this._renderizarCheckboxesTarefas();
     ui.abrirModal('modalRelatorio');
+  },
+
+  _renderizarCheckboxesTarefas() {
+    const container = document.getElementById('listaCheckboxesTarefas');
+    if (!container) return;
+    const tarefas = db.listarTarefas(this.obraAtualId);
+    if (!tarefas || tarefas.length === 0) {
+      container.innerHTML = '<p style="color:var(--cor-texto-mutado);font-size:0.85rem;padding:4px 0;">Nenhuma tarefa cadastrada nesta obra.</p>';
+      return;
+    }
+    container.innerHTML = tarefas.map(t => {
+      const id = t._id || t.id;
+      return `
+        <label class="checkbox-tarefa-item">
+          <input type="checkbox" name="tarefaSelecionada" value="${id}"
+            data-descricao="${utils.escapeHTML(t.descricao)}" data-status="${t.status}">
+          <span class="checkbox-tarefa-label">${utils.escapeHTML(t.descricao)}</span>
+          <span class="checkbox-tarefa-status ${t.status}">${utils.statusTexto(t.status)}</span>
+        </label>`;
+    }).join('');
+  },
+
+  async importarTarefasPadrao() {
+    if (!this.obraAtualId) return;
+    if (!confirm('Importar a programação padrão de 15 tarefas para esta obra?\nAtenção: a obra não pode ter tarefas existentes.')) return;
+
+    if (!utils.estaOnline()) {
+      return ui.aviso('É necessário estar online para importar a programação padrão.');
+    }
+
+    try {
+      ui.toast('Importando tarefas...');
+      const resp = await api.importarTarefasPadrao(this.obraAtualId);
+      for (const t of resp.tarefas) db.salvarTarefa(t);
+      tarefasManager.recarregar();
+      ui.sucesso(`${resp.inseridas} tarefas importadas com sucesso!`);
+    } catch (err) {
+      if (err.message.includes('já possui tarefas')) {
+        ui.aviso('Esta obra já possui tarefas. Exclua-as antes de importar o padrão.');
+      } else {
+        ui.erro('Erro ao importar: ' + err.message);
+      }
+    }
   },
 
   abrirEdicaoRelatorio(id) {
@@ -283,11 +327,17 @@ const app = {
   async salvarRelatorio(evento) {
     evento.preventDefault();
     const id = document.getElementById('relatorioId').value;
+
+    const tarefasSelecionadas = Array.from(
+      document.querySelectorAll('#listaCheckboxesTarefas input[name="tarefaSelecionada"]:checked')
+    ).map(cb => ({ id: cb.value, descricao: cb.dataset.descricao, status: cb.dataset.status }));
+
     const dados = {
       dataRelatorio: document.getElementById('relatorioData').value,
       supervisor: document.getElementById('relatorioSupervisor').value.trim(),
       endereco: document.getElementById('relatorioEndereco').value.trim(),
       observacaoGeral: document.getElementById('relatorioObservacao').value.trim(),
+      tarefasSelecionadas,
       fotos: camera.obterFotosParaSalvar()
     };
 

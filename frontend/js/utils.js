@@ -63,14 +63,14 @@ const utils = {
       'nao-iniciada': 'Não Iniciada',
       'em-andamento': 'Em Andamento',
       'concluida': 'Concluída',
-      'nao-executada': 'Não Executada'
+      'em-atraso': 'Em Atraso'
     };
     return map[status] || status;
   },
 
   // Próximo status (ciclo)
   proximoStatus(status) {
-    const ciclo = ['nao-iniciada', 'em-andamento', 'concluida', 'nao-executada'];
+    const ciclo = ['nao-iniciada', 'em-andamento', 'concluida', 'em-atraso'];
     const idx = ciclo.indexOf(status);
     return ciclo[(idx + 1) % ciclo.length];
   },

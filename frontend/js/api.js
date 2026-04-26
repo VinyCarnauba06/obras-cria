@@ -68,6 +68,10 @@ const api = {
     return this.request(`/tarefas/${id}`, { method: 'DELETE' });
   },
 
+  async importarTarefasPadrao(obraId) {
+    return this.request(`/obras/${obraId}/tarefas/padrao`, { method: 'POST' });
+  },
+
   // ====== RELATÓRIOS ======
   async listarRelatorios(obraId) {
     return this.request(`/obras/${obraId}/relatorios`);

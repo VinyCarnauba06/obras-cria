@@ -80,6 +80,7 @@ document.getElementById('formEditarFoto')?.addEventListener('submit', (e) => {
 });
 
   // Tarefas
+  document.getElementById('btnImportarPadrao')?.addEventListener('click', () => app.importarTarefasPadrao());
   document.getElementById('btnNovaTarefa')?.addEventListener('click', () => tarefasManager.abrirNovo());
   document.getElementById('formTarefa')?.addEventListener('submit', (e) => tarefasManager.salvar(e));
   document.getElementById('btnExcluirTarefa')?.addEventListener('click', () => tarefasManager.excluir());

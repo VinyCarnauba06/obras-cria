@@ -1,8 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Obra = require('../db/models/Obra');
 const Tarefa = require('../db/models/Tarefa');
 const Relatorio = require('../db/models/Relatorio');
+
+const validarId = (id, res) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({ erro: 'ID inválido' });
+    return false;
+  }
+  return true;
+};
 
 // GET /api/obras - Lista todas obras ativas
 router.get('/', async (req, res) => {
@@ -16,6 +25,7 @@ router.get('/', async (req, res) => {
 
 // GET /api/obras/:id - Detalhe de uma obra
 router.get('/:id', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const obra = await Obra.findById(req.params.id);
     if (!obra || !obra.ativo) {
@@ -40,6 +50,7 @@ router.post('/', async (req, res) => {
 
 // PUT /api/obras/:id - Atualizar obra
 router.put('/:id', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const { nome, endereco, descricao } = req.body;
     const obra = await Obra.findByIdAndUpdate(
@@ -56,6 +67,7 @@ router.put('/:id', async (req, res) => {
 
 // DELETE /api/obras/:id - Soft delete
 router.delete('/:id', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const obra = await Obra.findByIdAndUpdate(
       req.params.id,

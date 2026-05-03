@@ -13,7 +13,6 @@ const api = {
     if (config.body instanceof FormData) {
       delete config.headers['Content-Type'];
     }
-    console.log('📡', opcoes.method || 'GET', url);
     const resp = await fetch(url, config);
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ erro: 'Erro na requisição' }));

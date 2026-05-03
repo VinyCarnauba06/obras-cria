@@ -1,7 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Tarefa = require('../db/models/Tarefa');
 const Obra = require('../db/models/Obra');
+
+const validarId = (id, res) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({ erro: 'ID inválido' });
+    return false;
+  }
+  return true;
+};
 
 // GET /api/obras/:obraId/tarefas
 router.get('/obras/:obraId/tarefas', async (req, res) => {
@@ -131,6 +140,7 @@ router.post('/obras/:obraId/tarefas', async (req, res) => {
 
 // PUT /api/tarefas/:id
 router.put('/tarefas/:id', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const tarefaAtual = await Tarefa.findById(req.params.id);
     if (!tarefaAtual) return res.status(404).json({ erro: 'Tarefa não encontrada' });
@@ -172,6 +182,7 @@ router.put('/tarefas/:id', async (req, res) => {
 
 // DELETE /api/tarefas/:id
 router.delete('/tarefas/:id', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const tarefa = await Tarefa.findByIdAndUpdate(
       req.params.id,

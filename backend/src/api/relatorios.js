@@ -1,7 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Relatorio = require('../db/models/Relatorio');
 const { cloudinary, upload } = require('../config/cloudinary');
+
+const validarId = (id, res) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({ erro: 'ID inválido' });
+    return false;
+  }
+  return true;
+};
 
 function parseFotosPayload(body) {
   if (Array.isArray(body?.fotos)) return body.fotos;
@@ -51,6 +60,7 @@ router.get('/obras/:obraId/relatorios', async (req, res) => {
 
 // GET /api/relatorios/:id
 router.get('/relatorios/:id', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const relatorio = await Relatorio.findById(req.params.id);
     if (!relatorio || !relatorio.ativo) {
@@ -85,12 +95,19 @@ router.post('/obras/:obraId/relatorios', async (req, res) => {
 
 // PUT /api/relatorios/:id
 router.put('/relatorios/:id', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const { dataRelatorio, supervisor, endereco, observacaoGeral, status } = req.body;
     const fotos = parseFotosPayload(req.body);
     const tarefasSelecionadas = parseTarefasSelecionadas(req.body);
 
-    const update = { dataRelatorio, supervisor, endereco, observacaoGeral, status, tarefasSelecionadas };
+    const update = {};
+    if (dataRelatorio !== undefined) update.dataRelatorio = dataRelatorio;
+    if (supervisor !== undefined) update.supervisor = supervisor;
+    if (endereco !== undefined) update.endereco = endereco;
+    if (observacaoGeral !== undefined) update.observacaoGeral = observacaoGeral;
+    if (status !== undefined) update.status = status;
+    update.tarefasSelecionadas = tarefasSelecionadas;
     if (fotos.length > 0 || Array.isArray(req.body.fotos)) {
       update.fotos = fotos;
     }
@@ -109,6 +126,7 @@ router.put('/relatorios/:id', async (req, res) => {
 
 // DELETE /api/relatorios/:id
 router.delete('/relatorios/:id', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const relatorio = await Relatorio.findById(req.params.id);
     if (!relatorio) return res.status(404).json({ erro: 'Relatório não encontrado' });
@@ -131,6 +149,7 @@ router.delete('/relatorios/:id', async (req, res) => {
 
 // POST /api/relatorios/:id/fotos
 router.post('/relatorios/:id/fotos', upload.array('fotos', 50), async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const relatorio = await Relatorio.findById(req.params.id);
     if (!relatorio) return res.status(404).json({ erro: 'Relatório não encontrado' });
@@ -159,6 +178,7 @@ router.post('/relatorios/:id/fotos', upload.array('fotos', 50), async (req, res)
 
 // PATCH /api/relatorios/:id/fotos/:fotoId
 router.patch('/relatorios/:id/fotos/:fotoId', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const relatorio = await Relatorio.findById(req.params.id);
     if (!relatorio) return res.status(404).json({ erro: 'Relatório não encontrado' });
@@ -178,6 +198,7 @@ router.patch('/relatorios/:id/fotos/:fotoId', async (req, res) => {
 
 // DELETE /api/relatorios/:id/fotos/:fotoId
 router.delete('/relatorios/:id/fotos/:fotoId', async (req, res) => {
+  if (!validarId(req.params.id, res)) return;
   try {
     const relatorio = await Relatorio.findById(req.params.id);
     if (!relatorio) return res.status(404).json({ erro: 'Relatório não encontrado' });

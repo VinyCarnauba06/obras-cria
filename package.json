@@ -9,6 +9,6 @@
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
   },
   "engines": {
-    "node": "24.14.1"
+    "node": ">=20.0.0"
   }
 }

@@ -4,7 +4,8 @@
 
 const api = {
   // Troque o link do onrender pelo localhost do seu WSL
-  baseURL: localStorage.getItem('API_BASE_URL') || 'http://172.27.49.110:5000/api',
+  const API_BASE_URL = 'https://obras-cria-backend.onrender.com/api';
+
 
   setBaseURL(url) {
     this.baseURL = url;

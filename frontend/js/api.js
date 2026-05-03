@@ -1,10 +1,17 @@
-// ============================================
-// API - Cliente HTTP
-// ============================================
-
 const api = {
-  // Troque o link do onrender pelo localhost do seu WSL
-  const API_BASE_URL = 'https://obras-cria-backend.onrender.com/api';
+  API_BASE_URL: 'https://obras-cria.onrender.com/api',
+  
+  async listarObras() {
+    console.log('📡 GET:', this.API_BASE_URL + '/obras');
+    try {
+      const resp = await fetch(this.API_BASE_URL + '/obras');
+      console.log('✅ Resposta:', resp.status);
+      return await resp.json();
+    } catch (err) {
+      console.error('❌ Erro:', err);
+      throw err;
+    }
+  },
 
 
   setBaseURL(url) {

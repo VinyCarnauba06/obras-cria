@@ -7,12 +7,15 @@ const app = {
   _tarefasParsadasPDF: [],
 
   async iniciar() {
-    // Sincroniza com backend se online
-    await this.sincronizarDados();
-
-    // Renderiza view inicial
-    this.navegarPara('obras');
-  },
+  console.log('🔍 App iniciando...');
+  console.log('API_BASE_URL:', api.API_BASE_URL || 'NÃO DEFINIDA');
+  
+  // Sincroniza com backend se online
+  console.log('🌐 Conectando ao servidor...');
+  await this.sincronizarDados();
+  
+  console.log('✅ Sincronização completa');
+    }
 
   async sincronizarDados() {
     if (!utils.estaOnline()) {

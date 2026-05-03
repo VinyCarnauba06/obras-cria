@@ -6,12 +6,7 @@ const { cloudinary, upload } = require('../config/cloudinary');
 function parseFotosPayload(body) {
   if (Array.isArray(body?.fotos)) return body.fotos;
   if (typeof body?.fotos === 'string') {
-    try {
-      const fotos = JSON.parse(body.fotos);
-      return Array.isArray(fotos) ? fotos : [];
-    } catch (error) {
-      return [];
-    }
+    try { return JSON.parse(body.fotos) || []; } catch { return []; }
   }
   return [];
 }
@@ -20,12 +15,23 @@ function parseObservacoesPayload(body) {
   if (Array.isArray(body?.observacoes)) return body.observacoes;
   if (Array.isArray(body?.['observacoes[]'])) return body['observacoes[]'];
   if (typeof body?.observacoes === 'string') {
-    try {
-      const observacoes = JSON.parse(body.observacoes);
-      return Array.isArray(observacoes) ? observacoes : [];
-    } catch (error) {
-      return [];
-    }
+    try { return JSON.parse(body.observacoes) || []; } catch { return []; }
+  }
+  return [];
+}
+
+function parseTarefaIdsPayload(body) {
+  if (Array.isArray(body?.tarefaIds)) return body.tarefaIds;
+  if (typeof body?.tarefaIds === 'string') {
+    try { return JSON.parse(body.tarefaIds) || []; } catch { return []; }
+  }
+  return [];
+}
+
+function parseTarefasSelecionadas(body) {
+  if (Array.isArray(body?.tarefasSelecionadas)) return body.tarefasSelecionadas;
+  if (typeof body?.tarefasSelecionadas === 'string') {
+    try { return JSON.parse(body.tarefasSelecionadas) || []; } catch { return []; }
   }
   return [];
 }
@@ -60,12 +66,14 @@ router.get('/relatorios/:id', async (req, res) => {
 router.post('/obras/:obraId/relatorios', async (req, res) => {
   try {
     const { dataRelatorio, supervisor, endereco, observacaoGeral, status } = req.body;
+    const tarefasSelecionadas = parseTarefasSelecionadas(req.body);
     const relatorio = await Relatorio.create({
       obraId: req.params.obraId,
       dataRelatorio: dataRelatorio || new Date(),
       supervisor,
       endereco,
       observacaoGeral,
+      tarefasSelecionadas,
       status: status || 'rascunho',
       fotos: []
     });
@@ -80,10 +88,13 @@ router.put('/relatorios/:id', async (req, res) => {
   try {
     const { dataRelatorio, supervisor, endereco, observacaoGeral, status } = req.body;
     const fotos = parseFotosPayload(req.body);
-    const update = { dataRelatorio, supervisor, endereco, observacaoGeral, status };
+    const tarefasSelecionadas = parseTarefasSelecionadas(req.body);
+
+    const update = { dataRelatorio, supervisor, endereco, observacaoGeral, status, tarefasSelecionadas };
     if (fotos.length > 0 || Array.isArray(req.body.fotos)) {
       update.fotos = fotos;
     }
+
     const relatorio = await Relatorio.findByIdAndUpdate(
       req.params.id,
       update,
@@ -96,18 +107,15 @@ router.put('/relatorios/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/relatorios/:id - Remove + limpa fotos Cloudinary
+// DELETE /api/relatorios/:id
 router.delete('/relatorios/:id', async (req, res) => {
   try {
     const relatorio = await Relatorio.findById(req.params.id);
     if (!relatorio) return res.status(404).json({ erro: 'Relatório não encontrado' });
 
-    // Limpa fotos do Cloudinary
     for (const foto of relatorio.fotos) {
       try {
-        if (foto.public_id) {
-          await cloudinary.uploader.destroy(foto.public_id);
-        }
+        if (foto.public_id) await cloudinary.uploader.destroy(foto.public_id);
       } catch (err) {
         console.error('Erro ao deletar foto Cloudinary:', err.message);
       }
@@ -115,27 +123,29 @@ router.delete('/relatorios/:id', async (req, res) => {
 
     relatorio.ativo = false;
     await relatorio.save();
-
     res.json({ mensagem: 'Relatório removido', relatorio });
   } catch (error) {
     res.status(500).json({ erro: error.message });
   }
 });
 
-// POST /api/relatorios/:id/fotos - Upload de fotos
-router.post('/relatorios/:id/fotos', upload.array('fotos', 20), async (req, res) => {
+// POST /api/relatorios/:id/fotos
+router.post('/relatorios/:id/fotos', upload.array('fotos', 50), async (req, res) => {
   try {
     const relatorio = await Relatorio.findById(req.params.id);
     if (!relatorio) return res.status(404).json({ erro: 'Relatório não encontrado' });
 
     const ordemInicial = relatorio.fotos.length;
     const observacoes = parseObservacoesPayload(req.body);
+    const tarefaIds   = parseTarefaIdsPayload(req.body);
+
     const novasFotos = (req.files || []).map((file, idx) => ({
-      url: file.path,
+      url:       file.path,
       public_id: file.filename,
-      dataHora: new Date(),
+      dataHora:  new Date(),
       observacao: observacoes[idx] || '',
-      ordem: ordemInicial + idx
+      ordem:      ordemInicial + idx,
+      tarefaId:   tarefaIds[idx] || null
     }));
 
     relatorio.fotos.push(...novasFotos);
@@ -157,6 +167,7 @@ router.patch('/relatorios/:id/fotos/:fotoId', async (req, res) => {
     if (!foto) return res.status(404).json({ erro: 'Foto não encontrada' });
 
     foto.observacao = req.body.observacao ?? foto.observacao;
+    if (req.body.tarefaId !== undefined) foto.tarefaId = req.body.tarefaId;
     await relatorio.save();
 
     res.json({ mensagem: 'Foto atualizada', foto, relatorio });
@@ -175,9 +186,7 @@ router.delete('/relatorios/:id/fotos/:fotoId', async (req, res) => {
     if (!foto) return res.status(404).json({ erro: 'Foto não encontrada' });
 
     if (foto.public_id) {
-      try {
-        await cloudinary.uploader.destroy(foto.public_id);
-      } catch (err) {
+      try { await cloudinary.uploader.destroy(foto.public_id); } catch (err) {
         console.error('Erro Cloudinary:', err.message);
       }
     }

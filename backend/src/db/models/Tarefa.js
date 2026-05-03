@@ -25,6 +25,11 @@ const tarefaSchema = new mongoose.Schema({
     enum: ['nao-iniciada', 'em-andamento', 'concluida', 'em-atraso'],
     default: 'nao-iniciada'
   },
+  mes: {
+    type: String,
+    trim: true,
+    default: null
+  },
   observacoes: {
     type: String,
     trim: true,

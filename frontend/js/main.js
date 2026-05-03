@@ -80,6 +80,12 @@ document.getElementById('formEditarFoto')?.addEventListener('submit', (e) => {
 });
 
   // Tarefas
+  document.getElementById('btnImportarProgramacao')?.addEventListener('click', () => app.abrirModalImportarPDF());
+  document.getElementById('btnAnalisarPDF')?.addEventListener('click', () => app.validarEEnviarPDF());
+  document.getElementById('btnConfirmarImportacao')?.addEventListener('click', () => app.confirmarImportacaoPDF());
+  document.getElementById('selectMesImport')?.addEventListener('change', function () {
+    if (this.value === '__novo__') this.blur();
+  });
   document.getElementById('btnImportarPadrao')?.addEventListener('click', () => app.importarTarefasPadrao());
   document.getElementById('btnNovaTarefa')?.addEventListener('click', () => tarefasManager.abrirNovo());
   document.getElementById('formTarefa')?.addEventListener('submit', (e) => tarefasManager.salvar(e));

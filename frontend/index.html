@@ -81,8 +81,8 @@
       <div class="aba-conteudo ativa" id="abaTarefas">
         <div class="secao-header">
           <h2>Tarefas</h2>
-          <div style="display:flex;gap:8px;">
-            <button class="btn-secundario" id="btnImportarPadrao">📋 Prog. Padrão</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-secundario" id="btnImportarProgramacao">📄 Importar PDF</button>
             <button class="btn-primario" id="btnNovaTarefa">+ Nova Tarefa</button>
           </div>
         </div>
@@ -179,45 +179,66 @@
 
   <!-- MODAL: Relatório (Novo) -->
   <div class="modal" id="modalRelatorio">
-    <div class="modal-conteudo modal-grande">
+    <div class="modal-conteudo modal-grande modal-relatorio">
       <div class="modal-header">
         <h2 id="modalRelatorioTitulo">Novo Relatório</h2>
         <button class="btn-fechar" data-fechar-modal="modalRelatorio">×</button>
       </div>
       <form class="modal-body" id="formRelatorio">
         <input type="hidden" id="relatorioId">
-        <div class="campo-grid">
-          <div class="campo">
-            <label for="relatorioData">Data *</label>
-            <input type="date" id="relatorioData" required>
+
+        <!-- Dados básicos compactos no topo -->
+        <div class="rlt-dados-basicos">
+          <div class="campo-grid">
+            <div class="campo">
+              <label for="relatorioData">Data *</label>
+              <input type="date" id="relatorioData" required>
+            </div>
+            <div class="campo">
+              <label for="relatorioSupervisor">Supervisor</label>
+              <input type="text" id="relatorioSupervisor" value="Maurício Carnaúba">
+            </div>
           </div>
           <div class="campo">
-            <label for="relatorioSupervisor">Supervisor</label>
-            <input type="text" id="relatorioSupervisor" value="Maurício Carnaúba">
+            <label for="relatorioEndereco">Local / Endereço</label>
+            <input type="text" id="relatorioEndereco" placeholder="Local da visita">
           </div>
-        </div>
-        <div class="campo">
-          <label for="relatorioEndereco">Local / Endereço</label>
-          <input type="text" id="relatorioEndereco" placeholder="Local da visita">
-        </div>
-        <div class="campo">
-          <label for="relatorioObservacao">Observação Geral</label>
-          <textarea id="relatorioObservacao" rows="4" placeholder="Descreva o progresso, ocorrências..."></textarea>
         </div>
 
-        <div class="secao-tarefas-relatorio">
-          <h3>✅ Tarefas Ativas no Período</h3>
+        <!-- SEÇÃO 1: Tarefas selecionadas -->
+        <div class="rlt-secao">
+          <h3 class="rlt-secao-titulo">
+            <span class="rlt-secao-icone">☑</span>
+            Tarefas do Período
+          </h3>
           <div class="lista-checkboxes-tarefas" id="listaCheckboxesTarefas"></div>
         </div>
 
-        <div class="secao-fotos">
-          <div class="secao-header-fotos">
-            <h3>📷 Fotos</h3>
+        <!-- SEÇÃO 2: Observação Geral — separada visualmente das fotos -->
+        <div class="rlt-secao rlt-secao--obs">
+          <h3 class="rlt-secao-titulo">
+            <span class="rlt-secao-icone">📝</span>
+            Observação Geral do Relatório
+          </h3>
+          <p class="rlt-secao-descricao">Campo único do relatório. Não se refere a fotos individuais.</p>
+          <textarea id="relatorioObservacao" rows="4"
+            placeholder="Descreva o progresso e ocorrências gerais da obra..."></textarea>
+        </div>
+
+        <!-- SEÇÃO 3: Fotos com anotações individuais -->
+        <div class="rlt-secao rlt-secao--fotos">
+          <div class="rlt-fotos-header">
+            <div>
+              <h3 class="rlt-secao-titulo">
+                <span class="rlt-secao-icone">📷</span>
+                Registro Fotográfico
+              </h3>
+              <p class="rlt-secao-descricao">Cada foto tem anotação própria — clique em 💬 para editar.</p>
+            </div>
             <div class="botoes-foto">
               <button type="button" class="btn-secundario" id="btnCapturarFoto">📸 Câmera</button>
-              <button type="button" class="btn-secundario" id="btnSelecionarFoto">📁 Arquivos</button>
-              <input type="file" id="inputFotos" accept="image/*" multiple hidden>
-              <input type="file" id="inputCamera" accept="image/*" capture="environment" hidden>
+              <label class="btn-secundario" for="inputFotos">📁 Arquivos</label>
+              <input type="file" id="inputFotos" accept="image/*" multiple style="position:absolute;width:0;height:0;opacity:0;overflow:hidden;pointer-events:none;">
             </div>
           </div>
           <div class="grid-fotos" id="gridFotos"></div>
@@ -281,6 +302,41 @@
     </div>
   </div>
 
+  <!-- MODAL: Importar PDF de Programação -->
+  <div class="modal" id="modalImportarPDF">
+    <div class="modal-conteudo modal-grande">
+      <div class="modal-header">
+        <h2>Importar Programação (PDF)</h2>
+        <button class="btn-fechar" data-fechar-modal="modalImportarPDF">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="campo-grid">
+          <div class="campo">
+            <label for="inputPDFArquivo">Arquivo PDF *</label>
+            <input type="file" id="inputPDFArquivo" accept=".pdf" class="input-file-pdf">
+          </div>
+          <div class="campo">
+            <label for="selectMesImport">Mês de Referência *</label>
+            <select id="selectMesImport"></select>
+          </div>
+        </div>
+
+        <div id="importPDFPreviewArea" style="display:none;">
+          <div class="import-preview-header">
+            <span id="importMesDetectado"></span>
+          </div>
+          <ul class="import-preview-list" id="listaTarefasPreview"></ul>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secundario" data-fechar-modal="modalImportarPDF">Cancelar</button>
+          <button type="button" class="btn-secundario" id="btnAnalisarPDF">🔍 Analisar PDF</button>
+          <button type="button" class="btn-primario" id="btnConfirmarImportacao" disabled>✅ Importar Tarefas</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -292,6 +348,7 @@
   <script src="js/utils.js"></script>
   <script src="js/db.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/pdf-parser.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/camera.js"></script>
   <script src="js/pdf.js"></script>

@@ -1,14 +1,11 @@
 // ============================================
-// PDF - Geração de relatórios profissionais
+// PDF - Geração de relatórios por tarefa
 // ============================================
 
 const pdf = {
   async gerarRelatorio(relatorioId) {
     const relatorio = db.buscarRelatorio(relatorioId);
-    if (!relatorio) {
-      ui.erro('Relatório não encontrado');
-      return;
-    }
+    if (!relatorio) { ui.erro('Relatório não encontrado'); return; }
 
     const obra = db.buscarObra(relatorio.obraId);
     ui.toast('Gerando PDF...');
@@ -22,50 +19,58 @@ const pdf = {
       const margem      = 18;
       const larguraUtil = largura - 2 * margem;
 
-      // ── Paleta ──
+      // ── Paleta: preto / azul / branco ──
       const AZUL_ESCURO  = [12, 18, 52];
       const AZUL_MEDIO   = [25, 38, 88];
-      const LARANJA      = [245, 158, 11];   // destaque principal
-      const LARANJA_DIM  = [254, 243, 199];  // fundo suave laranja
+      const AZUL         = [79, 70, 229];
+      const AZUL_DIM     = [235, 234, 250];
       const TEXTO_ESCURO = [18, 24, 52];
       const CINZA_MEDIO  = [72, 84, 112];
       const CINZA_LEVE   = [241, 243, 250];
       const BRANCO       = [255, 255, 255];
       const BORDA        = [212, 218, 236];
 
-      // ── Rodapé ──
-      const desenharRodape = (pagina) => {
+      let paginaAtual = 1;
+
+      const desenharRodape = () => {
         const ry = altura - 10;
-        doc.setDrawColor(...LARANJA);
+        doc.setDrawColor(...AZUL);
         doc.setLineWidth(0.4);
         doc.line(margem, altura - 16, largura - margem, altura - 16);
-
         const dtGer = new Date().toLocaleString('pt-BR', {
           day: '2-digit', month: '2-digit', year: 'numeric',
           hour: '2-digit', minute: '2-digit'
         });
-
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(...CINZA_MEDIO);
         doc.text(`Gerado em ${dtGer}`, margem, ry);
-        doc.text(`Página ${pagina}`, largura - margem, ry, { align: 'right' });
-        doc.setTextColor(...LARANJA);
+        doc.text(`Página ${paginaAtual}`, largura - margem, ry, { align: 'right' });
+        doc.setTextColor(...AZUL);
         doc.text('Sistema de Supervisão de Creches', largura / 2, ry, { align: 'center' });
+      };
+
+      const novaPage = () => {
+        desenharRodape();
+        doc.addPage();
+        paginaAtual++;
+        return margem;
+      };
+
+      const checarEspaco = (y, minH) => {
+        if (y + minH > altura - 22) return novaPage();
+        return y;
       };
 
       // ════════════════════════════════════════
       // CABEÇALHO
       // ════════════════════════════════════════
       const alturaHeader = 42;
-
       doc.setFillColor(...AZUL_ESCURO);
       doc.rect(0, 0, largura, alturaHeader, 'F');
       doc.setFillColor(...AZUL_MEDIO);
       doc.rect(0, 0, largura * 0.55, alturaHeader, 'F');
-
-      // Barra de acento topo (laranja)
-      doc.setFillColor(...LARANJA);
+      doc.setFillColor(...AZUL);
       doc.rect(0, alturaHeader, largura, 3, 'F');
       doc.rect(0, 0, 5, alturaHeader, 'F');
 
@@ -73,21 +78,19 @@ const pdf = {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(19);
       doc.text('RELATÓRIO DE SUPERVISÃO', margem + 8, 17);
-
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(255, 220, 150);
+      doc.setTextColor(180, 190, 255);
       doc.text('Sistema de Supervisão de Creches', margem + 8, 27);
 
       const dataFormatada = utils.formatarData(relatorio.dataRelatorio);
-      const badgeW = 50, badgeH = 13;
-      const badgeX = largura - margem - badgeW;
-      doc.setFillColor(...LARANJA);
-      doc.roundedRect(badgeX, 14, badgeW, badgeH, 3, 3, 'F');
+      const bW = 50, bH = 13, bX = largura - margem - bW;
+      doc.setFillColor(...AZUL);
+      doc.roundedRect(bX, 14, bW, bH, 3, 3, 'F');
       doc.setTextColor(...BRANCO);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
-      doc.text(dataFormatada, badgeX + badgeW / 2, 22, { align: 'center' });
+      doc.text(dataFormatada, bX + bW / 2, 22, { align: 'center' });
 
       let y = alturaHeader + 12;
 
@@ -100,21 +103,19 @@ const pdf = {
       doc.setDrawColor(...BORDA);
       doc.setLineWidth(0.3);
       doc.roundedRect(margem, y, larguraUtil, alturaInfo, 3, 3, 'S');
-
-      doc.setFillColor(...LARANJA);
+      doc.setFillColor(...AZUL);
       doc.roundedRect(margem, y, 5, alturaInfo, 3, 3, 'F');
       doc.rect(margem + 3, y, 2, alturaInfo, 'F');
 
-      const col1X = margem + 12;
-      const col2X = margem + larguraUtil / 2 + 4;
-      const sepY  = y + alturaInfo / 2;
-      const halfW = larguraUtil / 2 - 16;
+      const c1X  = margem + 12;
+      const c2X  = margem + larguraUtil / 2 + 4;
+      const hlfW = larguraUtil / 2 - 16;
 
       doc.setDrawColor(...BORDA);
       doc.setLineWidth(0.25);
-      doc.line(col1X, sepY, margem + larguraUtil - 4, sepY);
+      doc.line(c1X, y + alturaInfo / 2, margem + larguraUtil - 4, y + alturaInfo / 2);
 
-      const desenharInfoRow = (lbl, val, rx, ry, maxW) => {
+      const infoRow = (lbl, val, rx, ry) => {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7);
         doc.setTextColor(...CINZA_MEDIO);
@@ -122,277 +123,176 @@ const pdf = {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9.5);
         doc.setTextColor(...TEXTO_ESCURO);
-        doc.text(val, rx, ry + 7, maxW ? { maxWidth: maxW } : undefined);
+        doc.text(String(val || '—'), rx, ry + 7, { maxWidth: hlfW });
       };
 
-      desenharInfoRow('CRECHE / UNIDADE',  obra?.nome || '—',                             col1X, y + 9,  halfW);
-      desenharInfoRow('DATA DO RELATÓRIO', dataFormatada,                                 col2X, y + 9,  halfW);
-      desenharInfoRow('SUPERVISOR',        relatorio.supervisor || 'Maurício Carnaúba',   col1X, y + 27, halfW);
-      desenharInfoRow('ENDEREÇO',          relatorio.endereco || obra?.endereco || '—',   col2X, y + 27, halfW);
+      infoRow('CRECHE / UNIDADE',  obra?.nome || '—',                           c1X, y + 9);
+      infoRow('DATA DO RELATÓRIO', dataFormatada,                                c2X, y + 9);
+      infoRow('SUPERVISOR',        relatorio.supervisor || 'Maurício Carnaúba',  c1X, y + 27);
+      infoRow('ENDEREÇO',          relatorio.endereco || obra?.endereco || '—',  c2X, y + 27);
 
-      y += alturaInfo + 14;
-
-      // ════════════════════════════════════════
-      // OBSERVAÇÃO GERAL
-      // ════════════════════════════════════════
-      if (relatorio.observacaoGeral) {
-        this._desenharSecaoTitulo(doc, 'OBSERVAÇÃO GERAL', margem, y, larguraUtil, LARANJA);
-        y += 14;
-
-        const obsLinhas = doc.splitTextToSize(relatorio.observacaoGeral, larguraUtil - 12);
-        const alturaObs = obsLinhas.length * 5.5 + 16;
-
-        doc.setFillColor(255, 251, 235);
-        doc.roundedRect(margem, y, larguraUtil, alturaObs, 2, 2, 'F');
-        doc.setDrawColor(...BORDA);
-        doc.setLineWidth(0.25);
-        doc.roundedRect(margem, y, larguraUtil, alturaObs, 2, 2, 'S');
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
-        doc.setTextColor(...TEXTO_ESCURO);
-        doc.text(obsLinhas, margem + 8, y + 10);
-
-        y += alturaObs + 16;
-      }
+      y += alturaInfo + 16;
 
       // ════════════════════════════════════════
-      // TAREFAS SELECIONADAS
+      // SEÇÕES POR TAREFA
       // ════════════════════════════════════════
       const tarefas = relatorio.tarefasSelecionadas || [];
-      if (tarefas.length > 0) {
-        if (y > altura - 80) {
-          desenharRodape(doc.internal.getNumberOfPages());
-          doc.addPage();
-          y = margem;
-        }
+      const todasFotos = relatorio.fotos || [];
 
-        this._desenharSecaoTitulo(
-          doc,
-          `TAREFAS DO RELATÓRIO — ${tarefas.length} tarefa${tarefas.length !== 1 ? 's' : ''}`,
-          margem, y, larguraUtil, LARANJA
-        );
-        y += 14;
+      const STATUS_TEXTO = {
+        'nao-iniciada': 'Não Iniciada',
+        'em-andamento': 'Em Andamento',
+        'concluida':    'Concluída',
+        'em-atraso':    'Em Atraso'
+      };
 
-        const STATUS_CORES = {
-          'nao-iniciada': { bg: [240, 242, 248], tx: [100, 116, 160] },
-          'em-andamento': { bg: [254, 252, 232], tx: [133, 100, 10] },
-          'concluida':    { bg: [220, 252, 231], tx: [22, 101, 52]  },
-          'em-atraso':    { bg: [254, 226, 226], tx: [153, 27, 27]  }
-        };
+      for (let ti = 0; ti < tarefas.length; ti++) {
+        const tarefa = tarefas[ti];
+        const tarefaIdReal = tarefa._id || tarefa.id;
+        const fotosDaTarefa = todasFotos.filter(f => f.tarefaId === tarefaIdReal);
 
-        const STATUS_TEXTO = {
-          'nao-iniciada': 'Não Iniciada',
-          'em-andamento': 'Em Andamento',
-          'concluida':    'Concluída',
-          'em-atraso':    'Em Atraso'
-        };
+        // ── Cabeçalho da tarefa ──
+        const nomeLinhas = doc.splitTextToSize(tarefa.descricao || '', larguraUtil - 65);
+        const altNome    = nomeLinhas.length * 5.8;
+        const TASK_H     = Math.max(26, altNome + 16);
 
-        const colW     = (larguraUtil - 6) / 2;
-        const itemH    = 10;
-        const itemGap  = 4;
+        y = checarEspaco(y, TASK_H + 10);
 
-        for (let i = 0; i < tarefas.length; i += 2) {
-          if (y + itemH + itemGap > altura - 22) {
-            desenharRodape(doc.internal.getNumberOfPages());
-            doc.addPage();
-            y = margem;
-          }
+        doc.setFillColor(20, 30, 70);
+        doc.roundedRect(margem, y, larguraUtil, TASK_H, 3, 3, 'F');
+        doc.setFillColor(...AZUL);
+        doc.roundedRect(margem, y, 5, TASK_H, 3, 3, 'F');
+        doc.rect(margem + 3, y, 2, TASK_H, 'F');
 
-          const par = [tarefas[i], tarefas[i + 1]].filter(Boolean);
-          for (let j = 0; j < par.length; j++) {
-            const t   = par[j];
-            const tx  = margem + j * (colW + 6);
-            const cor = STATUS_CORES[t.status] || STATUS_CORES['nao-iniciada'];
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(130, 150, 255);
+        doc.text(`TAREFA ${ti + 1} DE ${tarefas.length}`, margem + 10, y + 8);
 
-            doc.setFillColor(...cor.bg);
-            doc.roundedRect(tx, y, colW, itemH, 1.5, 1.5, 'F');
-            doc.setDrawColor(...BORDA);
-            doc.setLineWidth(0.2);
-            doc.roundedRect(tx, y, colW, itemH, 1.5, 1.5, 'S');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.setTextColor(...BRANCO);
+        doc.text(nomeLinhas, margem + 10, y + 15, { lineHeightFactor: 1.4 });
 
-            // Indicador de cor lateral
-            doc.setFillColor(...cor.tx);
-            doc.roundedRect(tx, y, 3, itemH, 1.5, 1.5, 'F');
-            doc.rect(tx + 1.5, y, 1.5, itemH, 'F');
+        // Badge de status
+        const badgeTx  = STATUS_TEXTO[tarefa.status] || tarefa.status || '—';
+        const badgeTxW = doc.getTextWidth(badgeTx) + 10;
+        const badgeTxX = margem + larguraUtil - badgeTxW - 6;
+        doc.setFillColor(...AZUL);
+        doc.roundedRect(badgeTxX, y + 6, badgeTxW, 9, 2, 2, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...BRANCO);
+        doc.text(badgeTx, badgeTxX + badgeTxW / 2, y + 12, { align: 'center' });
 
-            // Texto da tarefa
-            const descCortada = doc.splitTextToSize(t.descricao, colW - 42);
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            doc.setTextColor(...TEXTO_ESCURO);
-            doc.text(descCortada[0] || '', tx + 6, y + 6.5);
+        y += TASK_H + 8;
 
-            // Badge de status
-            const badgeTx   = STATUS_TEXTO[t.status] || t.status;
-            const badgeTxW  = doc.getTextWidth(badgeTx) + 6;
-            const badgeTxX  = tx + colW - badgeTxW - 2;
-            doc.setFillColor(...cor.tx);
-            doc.roundedRect(badgeTxX, y + 2, badgeTxW, 6, 1, 1, 'F');
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(6);
-            doc.setTextColor(...BRANCO);
-            doc.text(badgeTx, badgeTxX + badgeTxW / 2, y + 6, { align: 'center' });
-          }
+        // ── Observação da tarefa ──
+        if (tarefa.observacao) {
+          const obsLns = doc.splitTextToSize(tarefa.observacao, larguraUtil - 20);
+          const altObs = obsLns.length * 5.5 + 18;
+          y = checarEspaco(y, altObs);
 
-          y += itemH + itemGap;
-        }
-
-        y += 8;
-      }
-
-      // ════════════════════════════════════════
-      // REGISTRO FOTOGRÁFICO
-      // ════════════════════════════════════════
-      const fotos = relatorio.fotos || [];
-      if (fotos.length > 0) {
-        if (y > altura - 90) {
-          desenharRodape(doc.internal.getNumberOfPages());
-          doc.addPage();
-          y = margem;
-        }
-
-        this._desenharSecaoTitulo(
-          doc,
-          `REGISTRO FOTOGRÁFICO — ${fotos.length} foto${fotos.length !== 1 ? 's' : ''}`,
-          margem, y, larguraUtil, LARANJA
-        );
-        y += 16;
-
-        const gap       = 6;
-        const fotoW     = (larguraUtil - gap) / 2;
-        const fotoH     = fotoW * 0.72;
-        const CAPTION_H = 18;
-
-        const dataWm = utils.formatarData(relatorio.dataRelatorio);
-
-        for (let i = 0; i < fotos.length; i += 2) {
-          const par = [fotos[i], fotos[i + 1]].filter(Boolean);
-
-          // Header do bloco de fotos
-          const labelBloco = par[0]?.observacao
-            ? doc.splitTextToSize(par[0].observacao, larguraUtil - 4)[0]
-            : `Etapa ${Math.floor(i / 2) + 1}`;
-
-          const HEADER_H = 14;
-          if (y + HEADER_H + fotoH + CAPTION_H + gap > altura - 22) {
-            desenharRodape(doc.internal.getNumberOfPages());
-            doc.addPage();
-            y = margem;
-          }
-
-          // Cabeçalho individual do bloco
-          doc.setFillColor(250, 248, 240);
-          doc.roundedRect(margem, y, larguraUtil, HEADER_H, 2, 2, 'F');
-          doc.setDrawColor(...LARANJA);
-          doc.setLineWidth(0.3);
-          doc.roundedRect(margem, y, larguraUtil, HEADER_H, 2, 2, 'S');
-          doc.setFillColor(...LARANJA);
-          doc.rect(margem, y, 4, HEADER_H, 'F');
+          doc.setFillColor(...AZUL_DIM);
+          doc.roundedRect(margem, y, larguraUtil, altObs, 2, 2, 'F');
+          doc.setDrawColor(...BORDA);
+          doc.setLineWidth(0.25);
+          doc.roundedRect(margem, y, larguraUtil, altObs, 2, 2, 'S');
+          doc.setFillColor(...AZUL);
+          doc.rect(margem, y, 3.5, altObs, 'F');
 
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8.5);
-          doc.setTextColor(...TEXTO_ESCURO);
-          doc.text(labelBloco, margem + 9, y + 5.5);
+          doc.setFontSize(6.5);
+          doc.setTextColor(...AZUL);
+          doc.text('OBSERVAÇÃO DA TAREFA', margem + 8, y + 7);
 
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          doc.setTextColor(...CINZA_MEDIO);
-          doc.text('Fotos', margem + 9, y + 10.5);
+          doc.setFontSize(9.5);
+          doc.setTextColor(...TEXTO_ESCURO);
+          doc.text(obsLns, margem + 8, y + 13.5);
 
-          y += HEADER_H + 4;
+          y += altObs + 10;
+        }
 
-          // Calcula altura da caption
-          let maxCaption = CAPTION_H;
-          for (const f of par) {
-            if (f.observacao) {
-              const linhas = doc.splitTextToSize(f.observacao, fotoW - 8);
-              const ch = linhas.length * 4.5 + 8;
-              if (ch > maxCaption) maxCaption = ch;
-            }
-          }
-          const alturaBloco = fotoH + maxCaption + gap;
+        // ── Fotos da tarefa ──
+        if (fotosDaTarefa.length > 0) {
+          y = checarEspaco(y, 20);
+          this._desenharSecaoTitulo(
+            doc,
+            `REGISTRO FOTOGRÁFICO — ${fotosDaTarefa.length} foto${fotosDaTarefa.length !== 1 ? 's' : ''}`,
+            margem, y, larguraUtil, AZUL
+          );
+          y += 16;
+          y = await this._renderizarFotos(
+            doc, fotosDaTarefa, y, margem, larguraUtil, altura,
+            dataFormatada, AZUL, AZUL_DIM, BORDA, CINZA_MEDIO, BRANCO, TEXTO_ESCURO,
+            novaPage, checarEspaco
+          );
+          y += 10;
+        }
 
-          if (y + alturaBloco > altura - 22) {
-            desenharRodape(doc.internal.getNumberOfPages());
-            doc.addPage();
-            y = margem;
-          }
-
-          for (let j = 0; j < par.length; j++) {
-            const foto = par[j];
-            const x    = margem + j * (fotoW + gap);
-
-            // Sombra
-            doc.setFillColor(180, 190, 215);
-            doc.roundedRect(x + 1.5, y + 1.5, fotoW, fotoH, 2, 2, 'F');
-
-            // Fundo branco
-            doc.setFillColor(...BRANCO);
-            doc.roundedRect(x, y, fotoW, fotoH, 2, 2, 'F');
-
-            // Imagem
-            try {
-              const dataURL = await this.imagemParaDataURL(foto.url);
-              doc.addImage(dataURL, 'JPEG', x + 1, y + 1, fotoW - 2, fotoH - 2);
-            } catch {
-              doc.setFont('helvetica', 'italic');
-              doc.setFontSize(8);
-              doc.setTextColor(...CINZA_MEDIO);
-              doc.text('[foto indisponível]', x + fotoW / 2, y + fotoH / 2, { align: 'center' });
-            }
-
-            // Watermark data/hora (canto inferior direito da foto)
-            doc.setFillColor(0, 0, 0);
-            const wmH = 6, wmW = 28;
-            doc.setGState && doc.setGState(new doc.GState({ opacity: 0.55 }));
-            doc.rect(x + fotoW - wmW - 1, y + fotoH - wmH - 1, wmW, wmH, 'F');
-            doc.setGState && doc.setGState(new doc.GState({ opacity: 1 }));
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(5.5);
-            doc.setTextColor(...BRANCO);
-            doc.text(dataWm, x + fotoW - wmW / 2 - 1, y + fotoH - 3, { align: 'center' });
-
-            // Borda da foto
-            doc.setDrawColor(...BORDA);
-            doc.setLineWidth(0.4);
-            doc.roundedRect(x, y, fotoW, fotoH, 2, 2, 'S');
-
-            // Caption / Obs
-            const captionY = y + fotoH + 3;
-            if (foto.observacao) {
-              const obsLn = doc.splitTextToSize(foto.observacao, fotoW - 16);
-              const ch    = obsLn.length * 4.5 + 10;
-              doc.setFillColor(255, 251, 235);
-              doc.roundedRect(x, captionY, fotoW, ch, 1.5, 1.5, 'F');
-              doc.setDrawColor(...BORDA);
-              doc.setLineWidth(0.2);
-              doc.roundedRect(x, captionY, fotoW, ch, 1.5, 1.5, 'S');
-              doc.setFont('helvetica', 'bold');
-              doc.setFontSize(6.5);
-              doc.setTextColor(...LARANJA);
-              doc.text('Obs:', x + 4, captionY + 5.5);
-              doc.setFont('helvetica', 'normal');
-              doc.setFontSize(7.5);
-              doc.setTextColor(...TEXTO_ESCURO);
-              doc.text(obsLn, x + 4, captionY + 11);
-            } else {
-              doc.setFont('helvetica', 'italic');
-              doc.setFontSize(7);
-              doc.setTextColor(185, 195, 220);
-              doc.text(`Foto ${i + j + 1}`, x + 3.5, captionY + 5);
-            }
-          }
-
-          y += alturaBloco + 10;
+        // Separador entre tarefas
+        if (ti < tarefas.length - 1) {
+          y = checarEspaco(y, 6);
+          doc.setDrawColor(...BORDA);
+          doc.setLineWidth(0.3);
+          doc.line(margem, y, margem + larguraUtil, y);
+          y += 12;
         }
       }
 
-      desenharRodape(doc.internal.getNumberOfPages());
+      // ════════════════════════════════════════
+      // OBSERVAÇÕES GERAIS (texto + fotos avulsas)
+      // ════════════════════════════════════════
+      const fotosGerais  = todasFotos.filter(f => !f.tarefaId);
+      const temObsGeral  = !!relatorio.observacaoGeral;
+      const temFotosGer  = fotosGerais.length > 0;
+
+      if (temObsGeral || temFotosGer) {
+        y = checarEspaco(y, 30);
+
+        this._desenharSecaoTitulo(doc, 'OBSERVAÇÕES GERAIS', margem, y, larguraUtil, AZUL);
+        y += 14;
+
+        if (temObsGeral) {
+          const obsLns = doc.splitTextToSize(relatorio.observacaoGeral, larguraUtil - 12);
+          const altObs = obsLns.length * 5.5 + 16;
+          y = checarEspaco(y, altObs);
+
+          doc.setFillColor(...AZUL_DIM);
+          doc.roundedRect(margem, y, larguraUtil, altObs, 2, 2, 'F');
+          doc.setDrawColor(...BORDA);
+          doc.setLineWidth(0.25);
+          doc.roundedRect(margem, y, larguraUtil, altObs, 2, 2, 'S');
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9.5);
+          doc.setTextColor(...TEXTO_ESCURO);
+          doc.text(obsLns, margem + 8, y + 10);
+
+          y += altObs + 12;
+        }
+
+        if (temFotosGer) {
+          y = checarEspaco(y, 20);
+          this._desenharSecaoTitulo(
+            doc,
+            `REGISTROS GERAIS — ${fotosGerais.length} foto${fotosGerais.length !== 1 ? 's' : ''}`,
+            margem, y, larguraUtil, AZUL
+          );
+          y += 16;
+          y = await this._renderizarFotos(
+            doc, fotosGerais, y, margem, larguraUtil, altura,
+            dataFormatada, AZUL, AZUL_DIM, BORDA, CINZA_MEDIO, BRANCO, TEXTO_ESCURO,
+            novaPage, checarEspaco
+          );
+        }
+      }
+
+      desenharRodape();
 
       const nomeArquivo = `relatorio_${obra?.nome?.replace(/\s+/g, '_') || 'obra'}_${utils.formatarDataInput(relatorio.dataRelatorio)}.pdf`;
       doc.save(nomeArquivo);
-
       ui.sucesso('PDF gerado com sucesso!');
     } catch (err) {
       console.error('Erro PDF:', err);
@@ -400,15 +300,110 @@ const pdf = {
     }
   },
 
+  async _renderizarFotos(
+    doc, fotos, y, margem, larguraUtil, altura,
+    dataWm, AZUL, AZUL_DIM, BORDA, CINZA_MEDIO, BRANCO, TEXTO_ESCURO,
+    novaPage, checarEspaco
+  ) {
+    const gap       = 6;
+    const fotoW     = (larguraUtil - gap) / 2;
+    const fotoH     = fotoW * 0.72;
+    const CAPTION_H = 18;
+
+    for (let i = 0; i < fotos.length; i += 2) {
+      const par = [fotos[i], fotos[i + 1]].filter(Boolean);
+
+      // Calcular altura máxima da caption
+      let maxCaption = CAPTION_H;
+      for (const f of par) {
+        if (f.observacao) {
+          const lns = doc.splitTextToSize(f.observacao, fotoW - 8);
+          const ch = lns.length * 4.5 + 8;
+          if (ch > maxCaption) maxCaption = ch;
+        }
+      }
+      const alturaBloco = fotoH + maxCaption + gap;
+
+      y = checarEspaco(y, alturaBloco);
+
+      for (let j = 0; j < par.length; j++) {
+        const foto = par[j];
+        const x    = margem + j * (fotoW + gap);
+
+        // Sombra
+        doc.setFillColor(180, 190, 215);
+        doc.roundedRect(x + 1.5, y + 1.5, fotoW, fotoH, 2, 2, 'F');
+
+        // Fundo branco
+        doc.setFillColor(...BRANCO);
+        doc.roundedRect(x, y, fotoW, fotoH, 2, 2, 'F');
+
+        // Imagem
+        try {
+          const dataURL = await this.imagemParaDataURL(foto.url);
+          doc.addImage(dataURL, 'JPEG', x + 1, y + 1, fotoW - 2, fotoH - 2);
+        } catch {
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(8);
+          doc.setTextColor(...CINZA_MEDIO);
+          doc.text('[foto indisponível]', x + fotoW / 2, y + fotoH / 2, { align: 'center' });
+        }
+
+        // Watermark data
+        doc.setFillColor(0, 0, 0);
+        const wmH = 6, wmW = 28;
+        doc.setGState && doc.setGState(new doc.GState({ opacity: 0.55 }));
+        doc.rect(x + fotoW - wmW - 1, y + fotoH - wmH - 1, wmW, wmH, 'F');
+        doc.setGState && doc.setGState(new doc.GState({ opacity: 1 }));
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(5.5);
+        doc.setTextColor(...BRANCO);
+        doc.text(dataWm, x + fotoW - wmW / 2 - 1, y + fotoH - 3, { align: 'center' });
+
+        // Borda da foto
+        doc.setDrawColor(...BORDA);
+        doc.setLineWidth(0.4);
+        doc.roundedRect(x, y, fotoW, fotoH, 2, 2, 'S');
+
+        // Caption / Observação individual
+        const captionY = y + fotoH + 3;
+        if (foto.observacao) {
+          const obsLn = doc.splitTextToSize(foto.observacao, fotoW - 16);
+          const ch    = obsLn.length * 4.5 + 10;
+          doc.setFillColor(...AZUL_DIM);
+          doc.roundedRect(x, captionY, fotoW, ch, 1.5, 1.5, 'F');
+          doc.setDrawColor(...BORDA);
+          doc.setLineWidth(0.2);
+          doc.roundedRect(x, captionY, fotoW, ch, 1.5, 1.5, 'S');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6.5);
+          doc.setTextColor(...AZUL);
+          doc.text('Obs:', x + 4, captionY + 5.5);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7.5);
+          doc.setTextColor(...TEXTO_ESCURO);
+          doc.text(obsLn, x + 4, captionY + 11);
+        } else {
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(7);
+          doc.setTextColor(185, 195, 220);
+          doc.text(`Foto ${i + j + 1}`, x + 3.5, captionY + 5);
+        }
+      }
+
+      y += alturaBloco + 8;
+    }
+
+    return y;
+  },
+
   _desenharSecaoTitulo(doc, texto, x, y, larguraUtil, cor) {
     doc.setFillColor(...cor);
     doc.rect(x, y, 3.5, 11, 'F');
-
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.setTextColor(...cor);
     doc.text(texto, x + 8, y + 8);
-
     const txtW = doc.getTextWidth(texto);
     doc.setDrawColor(...cor);
     doc.setLineWidth(0.4);

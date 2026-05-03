@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Tarefa = require('../db/models/Tarefa');
+const Obra = require('../db/models/Obra');
 
 // GET /api/obras/:obraId/tarefas
 router.get('/obras/:obraId/tarefas', async (req, res) => {
@@ -12,6 +13,46 @@ router.get('/obras/:obraId/tarefas', async (req, res) => {
     res.json(tarefas);
   } catch (error) {
     res.status(500).json({ erro: error.message });
+  }
+});
+
+// POST /api/obras/:obraId/tarefas/importar — recebe tarefas parseadas pelo frontend
+router.post('/obras/:obraId/tarefas/importar', async (req, res) => {
+  try {
+    const { obraId } = req.params;
+    const { tarefas } = req.body;
+
+    if (!Array.isArray(tarefas) || tarefas.length === 0) {
+      return res.status(400).json({ erro: 'Lista de tarefas inválida ou vazia' });
+    }
+    if (tarefas.length > 100) {
+      return res.status(400).json({ erro: 'Máximo de 100 tarefas por importação' });
+    }
+
+    const obra = await Obra.findById(obraId);
+    if (!obra) return res.status(404).json({ erro: 'Obra não encontrada' });
+
+    const docs = tarefas.map(t => ({
+      obraId,
+      descricao: String(t.descricao || '').trim().slice(0, 500),
+      observacoes: t.observacoes || '',
+      motivoAtraso: t.motivoAtraso || '',
+      status: 'nao-iniciada',
+      mes: t.mes || null,
+      dataCriacao: t.dataCriacao ? new Date(t.dataCriacao) : new Date(),
+      historico: [{
+        data: new Date(),
+        statusAnterior: null,
+        statusNovo: 'nao-iniciada',
+        mudancas: { criacao: true, importacao: true },
+        autor: 'Importação PDF'
+      }]
+    }));
+
+    const inseridas = await Tarefa.insertMany(docs);
+    res.status(201).json({ inseridas: inseridas.length, tarefas: inseridas });
+  } catch (error) {
+    res.status(400).json({ erro: error.message });
   }
 });
 
@@ -64,13 +105,15 @@ router.post('/obras/:obraId/tarefas/padrao', async (req, res) => {
 // POST /api/obras/:obraId/tarefas
 router.post('/obras/:obraId/tarefas', async (req, res) => {
   try {
-    const { descricao, observacoes, motivoAtraso, status, dependencias } = req.body;
+    const { descricao, observacoes, motivoAtraso, status, dependencias, mes, dataCriacao } = req.body;
     const tarefa = await Tarefa.create({
       obraId: req.params.obraId,
       descricao,
       observacoes,
       motivoAtraso,
       status: status || 'nao-iniciada',
+      mes: mes || null,
+      dataCriacao: dataCriacao ? new Date(dataCriacao) : new Date(),
       dependencias: dependencias || [],
       historico: [{
         data: new Date(),
@@ -92,7 +135,7 @@ router.put('/tarefas/:id', async (req, res) => {
     const tarefaAtual = await Tarefa.findById(req.params.id);
     if (!tarefaAtual) return res.status(404).json({ erro: 'Tarefa não encontrada' });
 
-    const { descricao, observacoes, motivoAtraso, status, dependencias } = req.body;
+    const { descricao, observacoes, motivoAtraso, status, dependencias, mes } = req.body;
     const statusAnterior = tarefaAtual.status;
 
     const atualizacao = {
@@ -100,6 +143,7 @@ router.put('/tarefas/:id', async (req, res) => {
       observacoes,
       motivoAtraso,
       status,
+      mes,
       dependencias,
       dataAtualizacao: Date.now()
     };

@@ -3,7 +3,8 @@
 // ============================================
 
 const api = {
-  baseURL: localStorage.getItem('API_BASE_URL') || 'https://obras-cria.onrender.com',
+  // Troque o link do onrender pelo localhost do seu WSL
+  baseURL: localStorage.getItem('API_BASE_URL') || 'http://172.27.49.110:5000/api',
 
   setBaseURL(url) {
     this.baseURL = url;
@@ -72,6 +73,13 @@ const api = {
     return this.request(`/obras/${obraId}/tarefas/padrao`, { method: 'POST' });
   },
 
+  async importarTarefasPDF(obraId, payload) {
+    return this.request(`/obras/${obraId}/tarefas/importar`, {
+      method: 'POST',
+      body: payload
+    });
+  },
+
   // ====== RELATÓRIOS ======
   async listarRelatorios(obraId) {
     return this.request(`/obras/${obraId}/relatorios`);
@@ -96,11 +104,14 @@ const api = {
   async uploadFotos(relatorioId, fotosPendentes) {
     const formData = new FormData();
     const observacoes = [];
+    const tarefaIds   = [];
     for (const foto of fotosPendentes) {
       formData.append('fotos', foto.arquivo);
       observacoes.push(foto.observacao || '');
+      tarefaIds.push(foto.tarefaId || null);
     }
     formData.append('observacoes', JSON.stringify(observacoes));
+    formData.append('tarefaIds',   JSON.stringify(tarefaIds));
     return this.request(`/relatorios/${relatorioId}/fotos`, {
       method: 'POST',
       body: formData

@@ -12,40 +12,33 @@ const utils = {
     });
   },
 
-  // Formata data para pt-BR
+  // Formata data para pt-BR (evita bug de fuso: extrai direto da string)
   formatarData(data) {
     if (!data) return '';
-    const d = new Date(data);
-    if (isNaN(d)) return '';
-    return d.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    // Extrai "YYYY-MM-DD" da string sem converter timezone
+    const str = typeof data === 'string' ? data : new Date(data).toISOString();
+    const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return '';
+    return `${m[3]}/${m[2]}/${m[1]}`;
   },
 
   formatarDataHora(data) {
     if (!data) return '';
-    const d = new Date(data);
-    if (isNaN(d)) return '';
-    return d.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const str = typeof data === 'string' ? data : new Date(data).toISOString();
+    const m = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
+    // fallback para datas sem hora
+    const dm = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dm) return `${dm[3]}/${dm[2]}/${dm[1]}`;
+    return '';
   },
 
-  // Para input type="date"
+  // Para input type="date" — retorna "YYYY-MM-DD" sem ajuste de fuso
   formatarDataInput(data) {
     if (!data) return '';
-    const d = new Date(data);
-    if (isNaN(d)) return '';
-    const ano = d.getFullYear();
-    const mes = String(d.getMonth() + 1).padStart(2, '0');
-    const dia = String(d.getDate()).padStart(2, '0');
-    return `${ano}-${mes}-${dia}`;
+    const str = typeof data === 'string' ? data : new Date(data).toISOString();
+    const m = str.match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : '';
   },
 
   // Debounce

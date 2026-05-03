@@ -4,6 +4,7 @@
 
 const app = {
   obraAtualId: null,
+  _tarefasParsadasPDF: [],
 
   async iniciar() {
     // Sincroniza com backend se online
@@ -281,13 +282,31 @@ const app = {
     container.innerHTML = tarefas.map(t => {
       const id = t._id || t.id;
       return `
-        <label class="checkbox-tarefa-item">
-          <input type="checkbox" name="tarefaSelecionada" value="${id}"
-            data-descricao="${utils.escapeHTML(t.descricao)}" data-status="${t.status}">
-          <span class="checkbox-tarefa-label">${utils.escapeHTML(t.descricao)}</span>
-          <span class="checkbox-tarefa-status ${t.status}">${utils.statusTexto(t.status)}</span>
-        </label>`;
+        <div class="checkbox-tarefa-grupo">
+          <label class="checkbox-tarefa-item">
+            <input type="checkbox" name="tarefaSelecionada" value="${id}"
+              data-descricao="${utils.escapeHTML(t.descricao)}" data-status="${t.status}">
+            <span class="checkbox-tarefa-label">${utils.escapeHTML(t.descricao)}</span>
+            <span class="checkbox-tarefa-status ${t.status}">${utils.statusTexto(t.status)}</span>
+          </label>
+          <div class="tarefa-obs-area" id="obsArea_${id}" style="display:none;">
+            <textarea id="obsT_${id}" class="tarefa-obs-campo" rows="2"
+              placeholder="Observação sobre esta tarefa neste relatório..."></textarea>
+          </div>
+        </div>`;
     }).join('');
+
+    container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      const obsArea = document.getElementById(`obsArea_${cb.value}`);
+      cb.addEventListener('change', () => {
+        if (obsArea) obsArea.style.display = cb.checked ? '' : 'none';
+        if (!cb.checked) {
+          const ta = document.getElementById(`obsT_${cb.value}`);
+          if (ta) ta.value = '';
+        }
+        camera.renderizar();
+      });
+    });
   },
 
   async importarTarefasPadrao() {
@@ -313,6 +332,169 @@ const app = {
     }
   },
 
+  // ====== IMPORTAR PDF ======
+  abrirModalImportarPDF() {
+    if (!this.obraAtualId) return;
+
+    const NOMES_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                         'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const sel = document.getElementById('selectMesImport');
+    if (sel) {
+      sel.innerHTML = '';
+      const agora = new Date();
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(agora.getFullYear(), agora.getMonth() + i, 1);
+        const label = `${NOMES_MESES[d.getMonth()]} ${d.getFullYear()}`;
+        const opt = document.createElement('option');
+        opt.value = label;
+        opt.textContent = label;
+        sel.appendChild(opt);
+      }
+      const optNovo = document.createElement('option');
+      optNovo.value = '__novo__';
+      optNovo.textContent = '+ Novo Mês';
+      sel.appendChild(optNovo);
+    }
+
+    this._tarefasParsadasPDF = [];
+    const inputFile = document.getElementById('inputPDFArquivo');
+    if (inputFile) inputFile.value = '';
+    const preview = document.getElementById('importPDFPreviewArea');
+    if (preview) preview.style.display = 'none';
+    const btnConfirmar = document.getElementById('btnConfirmarImportacao');
+    if (btnConfirmar) btnConfirmar.disabled = true;
+
+    ui.abrirModal('modalImportarPDF');
+  },
+
+  async validarEEnviarPDF() {
+    const arquivo = document.getElementById('inputPDFArquivo')?.files[0];
+    if (!arquivo) return ui.erro('Selecione um arquivo PDF');
+    if (!arquivo.name.toLowerCase().endsWith('.pdf')) return ui.erro('O arquivo deve ter extensão .pdf');
+
+    try {
+      ui.toast('Analisando PDF...');
+      const resp = await pdfParser.parsearArquivo(arquivo);
+      this._tarefasParsadasPDF = resp.tarefas || [];
+
+      const spanMes = document.getElementById('importMesDetectado');
+      if (spanMes) {
+        spanMes.textContent = resp.mesExtraido
+          ? `Mês detectado no PDF: ${resp.mesExtraido}`
+          : 'Mês não detectado — selecione manualmente.';
+      }
+
+      if (resp.mesExtraido) {
+        const sel = document.getElementById('selectMesImport');
+        if (sel) {
+          const match = Array.from(sel.options).find(
+            o => o.value.toLowerCase() === resp.mesExtraido.toLowerCase()
+          );
+          if (match) sel.value = match.value;
+        }
+      }
+
+      const lista = document.getElementById('listaTarefasPreview');
+      if (lista) {
+        lista.innerHTML = this._tarefasParsadasPDF.map(t => `
+          <li class="import-preview-item">
+            <span class="import-status-badge ${t.status}">${utils.statusTexto(t.status)}</span>
+            <span>${utils.escapeHTML(t.descricao)}</span>
+          </li>`).join('');
+      }
+
+      const preview = document.getElementById('importPDFPreviewArea');
+      if (preview) preview.style.display = 'block';
+
+      const btnConfirmar = document.getElementById('btnConfirmarImportacao');
+      if (btnConfirmar) btnConfirmar.disabled = this._tarefasParsadasPDF.length === 0;
+
+      if (this._tarefasParsadasPDF.length === 0) {
+        ui.aviso('Nenhuma tarefa encontrada. Verifique se o PDF segue o formato esperado.');
+      } else {
+        ui.sucesso(`${this._tarefasParsadasPDF.length} tarefas extraídas`);
+      }
+    } catch (err) {
+      ui.erro('Erro ao analisar PDF: ' + err.message);
+    }
+  },
+
+  async confirmarImportacaoPDF() {
+    if (this._tarefasParsadasPDF.length === 0) return ui.aviso('Analise o PDF primeiro');
+
+    const sel = document.getElementById('selectMesImport');
+    let mesSelecionado = sel?.value || '';
+
+    if (mesSelecionado === '__novo__') {
+      mesSelecionado = (prompt('Digite o mês (ex: Julho 2026):') || '').trim();
+      if (!mesSelecionado) return;
+    }
+    if (!mesSelecionado) return ui.erro('Selecione o mês de referência');
+
+    const MESES_PT = {
+      'janeiro': 0, 'fevereiro': 1, 'março': 2, 'abril': 3,
+      'maio': 4, 'junho': 5, 'julho': 6, 'agosto': 7,
+      'setembro': 8, 'outubro': 9, 'novembro': 10, 'dezembro': 11
+    };
+    const partes = mesSelecionado.toLowerCase().split(/\s+/);
+    const mesNum = MESES_PT[partes[0]];
+    const ano = parseInt(partes[1]);
+    const dataCriacao = (mesNum !== undefined && !isNaN(ano))
+      ? new Date(ano, mesNum, 1).toISOString()
+      : new Date().toISOString();
+
+    ui.toast('Salvando tarefas...');
+
+    const tarefasPayload = this._tarefasParsadasPDF.map(t => ({
+      descricao: t.descricao,
+      status: t.status,
+      mes: mesSelecionado,
+      dataCriacao
+    }));
+
+    // Persiste localmente de imediato (offline-first)
+    const idsLocais = [];
+    for (const t of tarefasPayload) {
+      const idLocal = utils.gerarUUID();
+      idsLocais.push(idLocal);
+      db.salvarTarefa({
+        id: idLocal,
+        obraId: this.obraAtualId,
+        ...t,
+        ativo: true,
+        observacoes: '',
+        historico: []
+      });
+    }
+
+    if (utils.estaOnline()) {
+      try {
+        const resp = await api.importarTarefasPDF(this.obraAtualId, {
+          tarefas: tarefasPayload
+        });
+        for (const idLocal of idsLocais) db.removerTarefa(idLocal);
+        for (const srv of resp.tarefas) db.salvarTarefa(srv);
+        ui.fecharModal('modalImportarPDF');
+        tarefasManager.recarregar();
+        ui.sucesso(`${resp.inseridas} tarefas importadas para ${mesSelecionado}!`);
+      } catch {
+        for (let i = 0; i < tarefasPayload.length; i++) {
+          db.adicionarNaFila({ tipo: 'POST_TAREFA', obraId: this.obraAtualId, idLocal: idsLocais[i], dados: tarefasPayload[i] });
+        }
+        ui.fecharModal('modalImportarPDF');
+        tarefasManager.recarregar();
+        ui.aviso('Tarefas salvas localmente. Serão sincronizadas quando online.');
+      }
+    } else {
+      for (let i = 0; i < tarefasPayload.length; i++) {
+        db.adicionarNaFila({ tipo: 'POST_TAREFA', obraId: this.obraAtualId, idLocal: idsLocais[i], dados: tarefasPayload[i] });
+      }
+      ui.fecharModal('modalImportarPDF');
+      tarefasManager.recarregar();
+      ui.aviso(`${tarefasPayload.length} tarefas salvas localmente. Serão sincronizadas quando online.`);
+    }
+  },
+
   abrirEdicaoRelatorio(id) {
     const rel = db.buscarRelatorio(id);
     if (!rel) return ui.erro('Relatório não encontrado');
@@ -330,7 +512,12 @@ const app = {
 
     const tarefasSelecionadas = Array.from(
       document.querySelectorAll('#listaCheckboxesTarefas input[name="tarefaSelecionada"]:checked')
-    ).map(cb => ({ id: cb.value, descricao: cb.dataset.descricao, status: cb.dataset.status }));
+    ).map(cb => ({
+      id: cb.value,
+      descricao: cb.dataset.descricao,
+      status: cb.dataset.status,
+      observacao: document.getElementById(`obsT_${cb.value}`)?.value.trim() || ''
+    }));
 
     const dados = {
       dataRelatorio: document.getElementById('relatorioData').value,
@@ -353,8 +540,9 @@ const app = {
         if (utils.estaOnline() && existente._id) {
           try {
             const srv = await api.atualizarRelatorio(existente._id, dados);
-            relatorioSalvo = srv;
-            db.salvarRelatorio(srv);
+            // preserva tarefasSelecionadas — o servidor pode não retornar esse campo
+            relatorioSalvo = { ...srv, tarefasSelecionadas: dados.tarefasSelecionadas };
+            db.salvarRelatorio(relatorioSalvo);
           } catch {
             db.adicionarNaFila({ tipo: 'PUT_RELATORIO', id: existente._id, dados });
           }
@@ -375,8 +563,9 @@ const app = {
           try {
             const srv = await api.criarRelatorio(this.obraAtualId, dados);
             db.removerRelatorio(relatorioSalvo.id);
-            relatorioSalvo = srv;
-            db.salvarRelatorio(srv);
+            // preserva tarefasSelecionadas — o servidor pode não retornar esse campo
+            relatorioSalvo = { ...srv, tarefasSelecionadas: dados.tarefasSelecionadas };
+            db.salvarRelatorio(relatorioSalvo);
           } catch {
             db.adicionarNaFila({ tipo: 'POST_RELATORIO', obraId: this.obraAtualId, dados });
           }
@@ -385,24 +574,30 @@ const app = {
         }
       }
 
-      // Upload de fotos pendentes
+      // Upload de fotos pendentes em lotes de 10
 if (camera.temArquivosPendentes() && utils.estaOnline() && relatorioSalvo._id) {
-  ui.toast('Enviando fotos...');
   try {
-    const fotosPendentes = camera.fotosPendentes;
     const arquivos = camera.obterFotosPendentes();
-    const resp = await api.uploadFotos(relatorioSalvo._id, arquivos);
+    const LOTE = 10;
+    const totalLotes = Math.ceil(arquivos.length / LOTE);
+    let relatorioAtualizado = null;
 
-    // Mapeia observações
-    resp.relatorio.fotos.forEach((fotoServidor, idx) => {
-      if (fotosPendentes[idx] && fotosPendentes[idx].observacao) {
-        fotoServidor.observacao = fotosPendentes[idx].observacao;
-      }
-    });
+    for (let i = 0; i < arquivos.length; i += LOTE) {
+      const lote = arquivos.slice(i, i + LOTE);
+      const loteNum = Math.floor(i / LOTE) + 1;
+      ui.toast(totalLotes > 1
+        ? `Enviando fotos (${loteNum}/${totalLotes})...`
+        : 'Enviando fotos...'
+      );
+      const resp = await api.uploadFotos(relatorioSalvo._id, lote);
+      relatorioAtualizado = resp.relatorio;
+    }
 
-    relatorioSalvo = resp.relatorio;
-    db.salvarRelatorio(resp.relatorio);
-    camera.carregarFotos(resp.relatorio.fotos || []);
+    if (relatorioAtualizado) {
+      relatorioSalvo = { ...relatorioAtualizado, tarefasSelecionadas: dados.tarefasSelecionadas };
+      db.salvarRelatorio(relatorioSalvo);
+      camera.carregarFotos(relatorioAtualizado.fotos || []);
+    }
   } catch (err) {
     ui.erro('Erro upload fotos: ' + err.message);
   }

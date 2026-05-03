@@ -12,8 +12,9 @@ app.use(cors({
     'http://127.0.0.1:8080', 
     'http://localhost:8080', 
     'http://localhost:5173',
-    'https://obras-cria.vercel.app' // Já liberando o acesso para quando o Maurício for usar!
+    'https://obras-cria.vercel.app' 
   ],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true
 }));
 
@@ -50,7 +51,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Servidor rodando em http://${HOST}:${PORT}`);
   console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });

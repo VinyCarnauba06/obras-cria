@@ -1,26 +1,8 @@
 const api = {
   API_BASE_URL: 'https://obras-cria.onrender.com/api',
-  
-  async listarObras() {
-    console.log('📡 GET:', this.API_BASE_URL + '/obras');
-    try {
-      const resp = await fetch(this.API_BASE_URL + '/obras');
-      console.log('✅ Resposta:', resp.status);
-      return await resp.json();
-    } catch (err) {
-      console.error('❌ Erro:', err);
-      throw err;
-    }
-  },
-
-
-  setBaseURL(url) {
-    this.baseURL = url;
-    localStorage.setItem('API_BASE_URL', url);
-  },
 
   async request(caminho, opcoes = {}) {
-    const url = `${this.baseURL}${caminho}`;
+    const url = `${this.API_BASE_URL}${caminho}`;
     const config = {
       headers: { 'Content-Type': 'application/json', ...(opcoes.headers || {}) },
       ...opcoes
@@ -31,6 +13,7 @@ const api = {
     if (config.body instanceof FormData) {
       delete config.headers['Content-Type'];
     }
+    console.log('📡', opcoes.method || 'GET', url);
     const resp = await fetch(url, config);
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ erro: 'Erro na requisição' }));
@@ -137,7 +120,6 @@ const api = {
     return this.request(`/relatorios/${relatorioId}/fotos/${fotoId}`, { method: 'DELETE' });
   },
 
-  // Health check
   async verificarConexao() {
     try {
       await this.request('/health');

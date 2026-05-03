@@ -7,15 +7,15 @@ const app = {
   _tarefasParsadasPDF: [],
 
   async iniciar() {
-  console.log('🔍 App iniciando...');
-  console.log('API_BASE_URL:', api.API_BASE_URL || 'NÃO DEFINIDA');
-  
-  // Sincroniza com backend se online
-  console.log('🌐 Conectando ao servidor...');
-  await this.sincronizarDados();
-  
-  console.log('✅ Sincronização completa');
-    }
+    console.log('🔍 App iniciando...');
+    console.log('API_BASE_URL:', api.API_BASE_URL || 'NÃO DEFINIDA');
+    
+    // Sincroniza com backend se online
+    console.log('🌐 Conectando ao servidor...');
+    await this.sincronizarDados();
+    
+    console.log('✅ Sincronização completa');
+  },
 
   async sincronizarDados() {
     if (!utils.estaOnline()) {
@@ -543,7 +543,6 @@ const app = {
         if (utils.estaOnline() && existente._id) {
           try {
             const srv = await api.atualizarRelatorio(existente._id, dados);
-            // preserva tarefasSelecionadas — o servidor pode não retornar esse campo
             relatorioSalvo = { ...srv, tarefasSelecionadas: dados.tarefasSelecionadas };
             db.salvarRelatorio(relatorioSalvo);
           } catch {
@@ -566,7 +565,6 @@ const app = {
           try {
             const srv = await api.criarRelatorio(this.obraAtualId, dados);
             db.removerRelatorio(relatorioSalvo.id);
-            // preserva tarefasSelecionadas — o servidor pode não retornar esse campo
             relatorioSalvo = { ...srv, tarefasSelecionadas: dados.tarefasSelecionadas };
             db.salvarRelatorio(relatorioSalvo);
           } catch {
@@ -577,36 +575,35 @@ const app = {
         }
       }
 
-      // Upload de fotos pendentes em lotes de 10
-if (camera.temArquivosPendentes() && utils.estaOnline() && relatorioSalvo._id) {
-  try {
-    const arquivos = camera.obterFotosPendentes();
-    const LOTE = 10;
-    const totalLotes = Math.ceil(arquivos.length / LOTE);
-    let relatorioAtualizado = null;
+      if (camera.temArquivosPendentes() && utils.estaOnline() && relatorioSalvo._id) {
+        try {
+          const arquivos = camera.obterFotosPendentes();
+          const LOTE = 10;
+          const totalLotes = Math.ceil(arquivos.length / LOTE);
+          let relatorioAtualizado = null;
 
-    for (let i = 0; i < arquivos.length; i += LOTE) {
-      const lote = arquivos.slice(i, i + LOTE);
-      const loteNum = Math.floor(i / LOTE) + 1;
-      ui.toast(totalLotes > 1
-        ? `Enviando fotos (${loteNum}/${totalLotes})...`
-        : 'Enviando fotos...'
-      );
-      const resp = await api.uploadFotos(relatorioSalvo._id, lote);
-      relatorioAtualizado = resp.relatorio;
-    }
+          for (let i = 0; i < arquivos.length; i += LOTE) {
+            const lote = arquivos.slice(i, i + LOTE);
+            const loteNum = Math.floor(i / LOTE) + 1;
+            ui.toast(totalLotes > 1
+              ? `Enviando fotos (${loteNum}/${totalLotes})...`
+              : 'Enviando fotos...'
+            );
+            const resp = await api.uploadFotos(relatorioSalvo._id, lote);
+            relatorioAtualizado = resp.relatorio;
+          }
 
-    if (relatorioAtualizado) {
-      relatorioSalvo = { ...relatorioAtualizado, tarefasSelecionadas: dados.tarefasSelecionadas };
-      db.salvarRelatorio(relatorioSalvo);
-      camera.carregarFotos(relatorioAtualizado.fotos || []);
-    }
-  } catch (err) {
-    ui.erro('Erro upload fotos: ' + err.message);
-  }
-} else if (camera.temArquivosPendentes() && !utils.estaOnline()) {
-  ui.aviso('Fotos serão enviadas quando online');
-}
+          if (relatorioAtualizado) {
+            relatorioSalvo = { ...relatorioAtualizado, tarefasSelecionadas: dados.tarefasSelecionadas };
+            db.salvarRelatorio(relatorioSalvo);
+            camera.carregarFotos(relatorioAtualizado.fotos || []);
+          }
+        } catch (err) {
+          ui.erro('Erro upload fotos: ' + err.message);
+        }
+      } else if (camera.temArquivosPendentes() && !utils.estaOnline()) {
+        ui.aviso('Fotos serão enviadas quando online');
+      }
 
       ui.fecharModal('modalRelatorio');
       this.recarregarRelatorios();

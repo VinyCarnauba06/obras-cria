@@ -6,20 +6,23 @@ const conectarDB = require('./config/database');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 🔒 CORS Configurado para ler a Variável de Ambiente do Render
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
-  : ['http://localhost:8080', 'http://localhost:5173', 'http://127.0.0.1:8080'];
+const corsOrigins = [
+  'http://localhost:8080', 
+  'http://localhost:5173', 
+  'http://127.0.0.1:8080',
+  'https://obras-cria.vercel.app',          // Deixe como fallback seguro
+  'https://sistemacria.carnauba.dev.br'     // <== Seu subdomínio oficial
+];
 
 const corsOptions = {
   origin: corsOrigins,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
   credentials: true
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Preflight handler obrigatório
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));

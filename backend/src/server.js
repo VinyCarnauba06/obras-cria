@@ -6,13 +6,12 @@ const conectarDB = require('./config/database');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS — lê env var (lista separada por vírgula) com fallback para dev
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
-  : ['http://127.0.0.1:8080', 'http://localhost:8080', 'http://localhost:5173', 'https://obras-cria-frontend.onrender.com'];
-
+// 🔥 CORS: OPÇÃO NUCLEAR (Permite tudo e avisa quem está chamando)
 const corsOptions = {
-  origin: corsOrigins,
+  origin: function (origin, callback) {
+    console.log("🌍 Origin chamando a API:", origin || "Sem origin (Ferramenta local/Postman)");
+    callback(null, true); // O 'true' diz para o CORS: "deixa entrar qualquer um"
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

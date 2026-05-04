@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 5000;
 // CORS — lê env var (lista separada por vírgula) com fallback para dev
 const corsOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
-  : ['http://127.0.0.1:8080', 'http://localhost:8080', 'http://localhost:5173', 'https://obras-cria-frontend.onrender.com'\]\;
+  : ['http://127.0.0.1:8080', 'http://localhost:8080', 'http://localhost:5173', 'https://obras-cria-frontend.onrender.com'];
 
 const corsOptions = {
   origin: corsOrigins,

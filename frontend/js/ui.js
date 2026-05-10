@@ -252,5 +252,10 @@ const ui = {
   alternarSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (sidebar) sidebar.classList.toggle('aberta');
+  },
+
+  fecharSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.remove('aberta');
   }
 };

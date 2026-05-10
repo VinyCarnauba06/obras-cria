@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     item.addEventListener('click', () => {
       const view = item.dataset.view;
       app.navegarPara(view);
+      ui.fecharSidebar();
     });
   });
 
@@ -51,7 +52,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Botão Nova Obra
-  document.getElementById('btnNovaObra')?.addEventListener('click', () => app.abrirNovaObra());
+  document.getElementById('btnNovaObra')?.addEventListener('click', () => {
+    ui.fecharSidebar();
+    app.abrirNovaObra();
+  });
 
   // Form Obra
   document.getElementById('formObra')?.addEventListener('submit', (e) => app.salvarObra(e));

@@ -3,6 +3,22 @@
 // ============================================
 
 const pdf = {
+  async _getLogoBase64() {
+    try {
+      const resp = await fetch('assets/logo-carnauba.png');
+      if (!resp.ok) return null;
+      const blob = await resp.blob();
+      return await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  },
+
   async gerarRelatorio(relatorioId) {
     const relatorio = db.buscarRelatorio(relatorioId);
     if (!relatorio) { ui.erro('Relatório não encontrado'); return; }
@@ -12,6 +28,7 @@ const pdf = {
 
     try {
       const { jsPDF } = window.jspdf;
+      const logoBase64 = await this._getLogoBase64();
       const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
       const largura     = doc.internal.pageSize.getWidth();
@@ -84,13 +101,19 @@ const pdf = {
       doc.text('Sistema de Supervisão de Creches', margem + 8, 27);
 
       const dataFormatada = utils.formatarData(relatorio.dataRelatorio);
-      const bW = 50, bH = 13, bX = largura - margem - bW;
-      doc.setFillColor(...AZUL);
-      doc.roundedRect(bX, 14, bW, bH, 3, 3, 'F');
-      doc.setTextColor(...BRANCO);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text(dataFormatada, bX + bW / 2, 22, { align: 'center' });
+
+      // Logo CarnaúbaDev no cabeçalho
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', largura - margem - 42, 6, 38, 21);
+      } else {
+        const bW = 50, bH = 13, bX = largura - margem - bW;
+        doc.setFillColor(...AZUL);
+        doc.roundedRect(bX, 14, bW, bH, 3, 3, 'F');
+        doc.setTextColor(...BRANCO);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(dataFormatada, bX + bW / 2, 22, { align: 'center' });
+      }
 
       let y = alturaHeader + 12;
 
@@ -287,6 +310,160 @@ const pdf = {
             novaPage, checarEspaco
           );
         }
+      }
+
+      desenharRodape();
+
+      // ════════════════════════════════════════
+      // PÁGINA FINAL — RESUMO DE TAREFAS
+      // ════════════════════════════════════════
+      doc.addPage();
+      paginaAtual++;
+
+      // Header da página final
+      doc.setFillColor(...AZUL_ESCURO);
+      doc.rect(0, 0, largura, 32, 'F');
+      doc.setFillColor(...AZUL);
+      doc.rect(0, 32, largura, 2.5, 'F');
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', margem, 4, 34, 20);
+      }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(...BRANCO);
+      doc.text('RESUMO DE TAREFAS', largura - margem, 16, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(180, 190, 255);
+      doc.text(obra?.nome || '—', largura - margem, 24, { align: 'right' });
+
+      let fy = 42;
+
+      // Tabela de tarefas
+      const LINHAS_H   = 9;
+      const COL_TAREFA = larguraUtil - 52;
+      const COL_STATUS = 52;
+      const thX        = margem;
+
+      // Cabeçalho da tabela
+      doc.setFillColor(...AZUL_MEDIO);
+      doc.rect(thX, fy, larguraUtil, LINHAS_H, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...BRANCO);
+      doc.text('TAREFA', thX + 4, fy + 6);
+      doc.text('STATUS', thX + COL_TAREFA + COL_STATUS / 2, fy + 6, { align: 'center' });
+      fy += LINHAS_H;
+
+      const todasTarefasObra = db.listarTarefas(relatorio.obraId);
+      if (todasTarefasObra.length === 0) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(9);
+        doc.setTextColor(...CINZA_MEDIO);
+        doc.text('Nenhuma tarefa cadastrada nesta obra.', thX + 4, fy + 8);
+        fy += 16;
+      } else {
+        for (let i = 0; i < todasTarefasObra.length; i++) {
+          const t    = todasTarefasObra[i];
+          const desc = doc.splitTextToSize(t.descricao || '—', COL_TAREFA - 8);
+          const rH   = Math.max(LINHAS_H, desc.length * 5 + 6);
+
+          if (fy + rH > altura - 22) {
+            desenharRodape();
+            doc.addPage();
+            paginaAtual++;
+            fy = margem;
+          }
+
+          const bgColor = i % 2 === 0 ? CINZA_LEVE : BRANCO;
+          doc.setFillColor(...bgColor);
+          doc.rect(thX, fy, larguraUtil, rH, 'F');
+          doc.setDrawColor(...BORDA);
+          doc.setLineWidth(0.2);
+          doc.line(thX, fy + rH, thX + larguraUtil, fy + rH);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
+          doc.setTextColor(...TEXTO_ESCURO);
+          doc.text(desc, thX + 4, fy + 6);
+
+          // Badge de status
+          const statusCores = {
+            'concluida':    [[22, 163, 74],   [240, 253, 244]],
+            'em-andamento': [[37, 99, 235],    [239, 246, 255]],
+            'em-atraso':    [[220, 38, 38],    [254, 242, 242]],
+            'nao-iniciada': [[107, 114, 128],  [249, 250, 251]]
+          };
+          const [corTx, corBg] = statusCores[t.status] || statusCores['nao-iniciada'];
+          const statusTx = STATUS_TEXTO[t.status] || t.status || '—';
+          const stW = doc.getTextWidth(statusTx) + 8;
+          const stX = thX + COL_TAREFA + (COL_STATUS - stW) / 2;
+          const stY = fy + (rH - 6) / 2;
+
+          doc.setFillColor(...corBg);
+          doc.roundedRect(stX, stY, stW, 6, 1.5, 1.5, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6.5);
+          doc.setTextColor(...corTx);
+          doc.text(statusTx, stX + stW / 2, stY + 4.2, { align: 'center' });
+
+          fy += rH;
+        }
+      }
+
+      // Separador
+      fy += 6;
+      doc.setDrawColor(...AZUL);
+      doc.setLineWidth(0.4);
+      doc.line(margem, fy, margem + larguraUtil, fy);
+      fy += 10;
+
+      // Estatísticas
+      const total      = todasTarefasObra.length;
+      const concluidas = todasTarefasObra.filter(t => t.status === 'concluida').length;
+      const andamento  = todasTarefasObra.filter(t => t.status === 'em-andamento').length;
+      const atraso     = todasTarefasObra.filter(t => t.status === 'em-atraso').length;
+      const pct        = total > 0 ? ((concluidas / total) * 100).toFixed(0) : 0;
+
+      const stats = [
+        { label: 'Total', valor: total,      cor: AZUL_MEDIO },
+        { label: 'Concluídas', valor: concluidas, cor: [22, 163, 74] },
+        { label: 'Em Andamento', valor: andamento, cor: [37, 99, 235] },
+        { label: 'Em Atraso', valor: atraso,    cor: [220, 38, 38] },
+      ];
+      const boxW = larguraUtil / stats.length - 4;
+      for (let s = 0; s < stats.length; s++) {
+        const bx = margem + s * (boxW + 4);
+        doc.setFillColor(...CINZA_LEVE);
+        doc.roundedRect(bx, fy, boxW, 22, 2, 2, 'F');
+        doc.setDrawColor(...BORDA);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(bx, fy, boxW, 22, 2, 2, 'S');
+        doc.setFillColor(...stats[s].cor);
+        doc.rect(bx, fy, 3, 22, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(...stats[s].cor);
+        doc.text(String(stats[s].valor), bx + boxW / 2, fy + 13, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...CINZA_MEDIO);
+        doc.text(stats[s].label.toUpperCase(), bx + boxW / 2, fy + 19, { align: 'center' });
+      }
+      fy += 30;
+
+      // Percentual de conclusão
+      if (total > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...TEXTO_ESCURO);
+        doc.text(`Percentual de conclusão: ${pct}%`, margem, fy);
+        const barW = larguraUtil;
+        const barH = 5;
+        doc.setFillColor(...BORDA);
+        doc.roundedRect(margem, fy + 4, barW, barH, 2, 2, 'F');
+        doc.setFillColor(22, 163, 74);
+        doc.roundedRect(margem, fy + 4, Math.max(2, barW * concluidas / total), barH, 2, 2, 'F');
       }
 
       desenharRodape();

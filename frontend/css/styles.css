@@ -387,3 +387,34 @@ a { color: var(--cor-destaque); text-decoration: none; }
   max-width: 320px;
   margin: 0 auto;
 }
+
+/* ============================================
+   MARCA D'ÁGUA — CARNAÚBADEV
+   ============================================ */
+.watermark-carnauba {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.10;
+  transition: opacity 0.3s ease;
+}
+
+.watermark-carnauba img {
+  width: 160px;
+  height: auto;
+  display: block;
+  filter: grayscale(30%) brightness(1.4);
+}
+
+@media (max-width: 768px) {
+  .watermark-carnauba {
+    bottom: 16px;
+    right: 16px;
+  }
+  .watermark-carnauba img {
+    width: 110px;
+  }
+}

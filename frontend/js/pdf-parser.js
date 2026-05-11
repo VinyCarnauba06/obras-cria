@@ -4,62 +4,38 @@ const pdfParser = {
   _lib: null,
 
   async _carregarLib() {
-    if (this._lib) return this._lib;
-    
-    // Aguarda pdfjsLib estar disponível globalmente (carregado via script tag no HTML)
-    let tentativas = 0;
-    const MAX_TENTATIVAS = 50; // ~5 segundos em mobile
-    
-    while (!window.pdfjsLib && tentativas < MAX_TENTATIVAS) {
-      await new Promise(r => setTimeout(r, 100));
-      tentativas++;
+  if (this._lib) return this._lib;
+  
+  // Aguarda pdfjsLib estar disponível
+  let tentativas = 0;
+  const MAX_TENTATIVAS = 200; // ~20 segundos (era 50 = 5s)
+  
+  console.log('⏳ Aguardando PDFjs carregar...');
+  
+  while (!window.pdfjsLib && tentativas < MAX_TENTATIVAS) {
+    if (tentativas % 20 === 0) {
+      console.log(`  Tentativa ${tentativas / 2}s...`);
     }
-    
-    if (!window.pdfjsLib) {
-      const erro = new Error(
-        'PDFjs não carregou. Verifique sua conexão de internet e recarregue a página.'
-      );
-      console.error('❌ Erro crítico:', erro);
-      throw erro;
-    }
-    
-    // Configura worker para parsing em background
-    if (window.pdfjsLib.GlobalWorkerOptions) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 
-        'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js';
-    }
-    
-    this._lib = window.pdfjsLib;
-    console.log('✅ PDFjs v4.4.168 carregado com sucesso');
-    return this._lib;
-  },
-
-  // Agrupa itens de texto por proximidade de coordenada Y (mesma linha visual)
-  _reconstruirLinhas(items) {
-    if (!items.length) return [];
-
-    const Y_TOLERANCIA = 3; // itens dentro de 3pt são tratados como mesma linha
-    const grupos = [];
-
-    for (const item of items) {
-      if (!item.str.trim()) continue;
-      const y = item.transform[5];
-      const grupo = grupos.find(g => Math.abs(g.y - y) <= Y_TOLERANCIA);
-      if (grupo) {
-        grupo.items.push(item);
-      } else {
-        grupos.push({ y, items: [item] });
-      }
-    }
-
-    // Y descrescente = topo→rodapé (coordenadas PDF têm Y=0 em baixo)
-    grupos.sort((a, b) => b.y - a.y);
-
-    return grupos.map(g => {
-      g.items.sort((a, b) => a.transform[4] - b.transform[4]); // ordena por X
-      return g.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
-    }).filter(l => l.length > 0);
-  },
+    await new Promise(r => setTimeout(r, 100));
+    tentativas++;
+  }
+  
+  if (!window.pdfjsLib) {
+    console.error('❌ window.pdfjsLib:', window.pdfjsLib);
+    console.error('❌ window.pdfjs:', window.pdfjs);
+    console.error('Objetos globais disponíveis:', Object.keys(window).filter(k => k.includes('pdf')));
+    throw new Error('PDFjs não carregou após 20s. Verifique a aba Network no DevTools.');
+  }
+  
+  if (window.pdfjsLib.GlobalWorkerOptions) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js';
+  }
+  
+  this._lib = window.pdfjsLib;
+  console.log('✅ PDFjs carregado:', this._lib);
+  return this._lib;
+},
 
   async parsearArquivo(file) {
     try {

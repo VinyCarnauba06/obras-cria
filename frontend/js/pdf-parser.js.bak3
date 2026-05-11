@@ -3,71 +3,39 @@
 const pdfParser = {
   _lib: null,
 
-  _detectarVersao(lib) {
-    if (!lib || !lib.version) return null;
-    const major = parseInt(lib.version.split('.')[0], 10);
-    return major >= 4 ? 'v4' : 'v3';
-  },
-
-  _configurarWorker(lib, versao) {
-    if (!lib.GlobalWorkerOptions) return;
-    if (versao === 'v4') {
-      lib.GlobalWorkerOptions.workerSrc =
-        'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js';
-    } else {
-      lib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
-    console.log(`⚙️ Worker PDFjs configurado para ${versao}: ${lib.GlobalWorkerOptions.workerSrc}`);
-  },
-
-  async _aguardarCarregamento() {
-    const MAX_MS = 15000;
-    const INTERVALO = 100;
-    let elapsed = 0;
-
-    while (elapsed < MAX_MS) {
-      const lib = window.pdfjsLib || window.pdfjs;
-      if (lib) return lib;
-      if (elapsed % 2000 === 0 && elapsed > 0) {
-        console.log(`⏳ Aguardando PDFjs... ${elapsed / 1000}s / 15s`);
-      }
-      await new Promise(r => setTimeout(r, INTERVALO));
-      elapsed += INTERVALO;
-    }
-    return null;
-  },
-
   async _carregarLib() {
-    if (this._lib) return this._lib;
-
-    console.log('🔍 Buscando PDFjs (window.pdfjsLib ou window.pdfjs)...');
-
-    let lib = window.pdfjsLib || window.pdfjs;
-
-    if (!lib) {
-      console.log('⏳ PDFjs não imediato — aguardando até 15s (fallback pode estar carregando)...');
-      lib = await this._aguardarCarregamento();
+  if (this._lib) return this._lib;
+  
+  // Aguarda pdfjsLib estar disponível
+  let tentativas = 0;
+  const MAX_TENTATIVAS = 200; // ~20 segundos (era 50 = 5s)
+  
+  console.log('⏳ Aguardando PDFjs carregar...');
+  
+  while (!window.pdfjsLib && tentativas < MAX_TENTATIVAS) {
+    if (tentativas % 20 === 0) {
+      console.log(`  Tentativa ${tentativas / 2}s...`);
     }
-
-    if (!lib) {
-      const globaisPdf = Object.keys(window).filter(k => k.toLowerCase().includes('pdf'));
-      console.error('❌ PDFjs não encontrado após 15s');
-      console.error('  window.pdfjsLib:', window.pdfjsLib);
-      console.error('  window.pdfjs:', window.pdfjs);
-      console.error('  Globais com "pdf":', globaisPdf);
-      throw new Error(
-        'PDFjs não carregou após 15s. Verifique a aba Network — o CDN pode estar bloqueado.'
-      );
-    }
-
-    const versao = this._detectarVersao(lib);
-    console.log(`✅ PDFjs detectado: ${lib.version || '(versão desconhecida)'} → ${versao || 'indefinida'}`);
-
-    this._configurarWorker(lib, versao);
-    this._lib = lib;
-    return this._lib;
-  },
+    await new Promise(r => setTimeout(r, 100));
+    tentativas++;
+  }
+  
+  if (!window.pdfjsLib) {
+    console.error('❌ window.pdfjsLib:', window.pdfjsLib);
+    console.error('❌ window.pdfjs:', window.pdfjs);
+    console.error('Objetos globais disponíveis:', Object.keys(window).filter(k => k.includes('pdf')));
+    throw new Error('PDFjs não carregou após 20s. Verifique a aba Network no DevTools.');
+  }
+  
+  if (window.pdfjsLib.GlobalWorkerOptions) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js';
+  }
+  
+  this._lib = window.pdfjsLib;
+  console.log('✅ PDFjs carregado:', this._lib);
+  return this._lib;
+},
 
   async parsearArquivo(file) {
     try {
@@ -100,37 +68,12 @@ const pdfParser = {
     }
   },
 
-  _reconstruirLinhas(items) {
-    if (!items || items.length === 0) return [];
-    const linhas = [];
-    let linhaAtual = '';
-    let yAtual = null;
-
-    for (const item of items) {
-      const y = item.transform ? Math.round(item.transform[5]) : null;
-      const texto = (item.str || '').trim();
-      if (!texto) continue;
-
-      if (yAtual === null) {
-        yAtual = y;
-        linhaAtual = texto;
-      } else if (y === yAtual || Math.abs(y - yAtual) < 3) {
-        linhaAtual += ' ' + texto;
-      } else {
-        if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
-        linhaAtual = texto;
-        yAtual = y;
-      }
-    }
-    if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
-    return linhas;
-  },
-
   extrairTarefas(texto) {
     console.log('\n📋 ===== DEBUG EXTRAÇÃO =====');
     console.log(texto);
     console.log('='.repeat(60));
 
+    // ── Detecta mês/ano no cabeçalho ────────────────────────────────
     const mesMatch = /(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(?:de\s+)?(\d{4})/i.exec(texto);
     let mesExtraido = null;
     if (mesMatch) {
@@ -142,19 +85,24 @@ const pdfParser = {
     const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     console.log(`Total de linhas: ${linhas.length}`);
 
+    // ── Identifica cabeçalhos de seção ──────────────────────────────
+    // Exemplos reais: "SERVIÇOS EXECUTADOS CONCLUÍDOS"
+    //                 "SERVIÇOS A SEREM EXECUTADOS ATÉ O DIA 30/04/2026"
     const ehCabecalhoSecao = (l) =>
       /SERVI[ÇC]OS\s+EXECUTADOS/i.test(l) ||
       /SERVI[ÇC]OS\s+A\s+SEREM/i.test(l);
 
+    // ── Linhas que nunca são tarefas ────────────────────────────────
     const ehLinhaSistema = (l) =>
-      /PROGRAMA[ÇC][ÃA]O\s+M[EÊ]S/i.test(l) ||
-      /^CRECHE\s+CRIA/i.test(l) ||
-      /^CRIA\s+/i.test(l) ||
-      /AT[EÉ]\s+O\s+DIA\s+\d{2}\/\d{2}/i.test(l) ||
-      /^\d{2}\/\d{2}\/\d{4}$/.test(l) ||
-      /^P[AÁ]G(INA)?\s*\d/i.test(l) ||
+      /PROGRAMA[ÇC][ÃA]O\s+M[EÊ]S/i.test(l) ||       // "PROGRAMAÇÃO MÊS DE..."
+      /^CRECHE\s+CRIA/i.test(l) ||                      // nome da creche
+      /^CRIA\s+/i.test(l) ||                            // variante do nome
+      /AT[EÉ]\s+O\s+DIA\s+\d{2}\/\d{2}/i.test(l) ||   // "ATÉ O DIA DD/MM"
+      /^\d{2}\/\d{2}\/\d{4}$/.test(l) ||               // data solta
+      /^P[AÁ]G(INA)?\s*\d/i.test(l) ||                 // nº de página
       l.length < 4;
 
+    // ── Itera linha por linha ────────────────────────────────────────
     const tarefas = [];
     let emSecao = false;
 
@@ -174,6 +122,7 @@ const pdfParser = {
         continue;
       }
 
+      // Converte CAPS para Title Case
       const descricao = linha
         .replace(/\s+/g, ' ')
         .trim()

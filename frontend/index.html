@@ -346,8 +346,19 @@
   <!-- Scripts externos -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <!-- PDFjs v4.4.168 - carregado ANTES de pdf-parser.js -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.js"></script>
+  <!-- PDFjs: v4.4.168 primária, fallback automático para v3.11.174 -->
+  <script>
+    function _pdfFallback() {
+      console.warn('⚠️ PDFjs v4.4.168 não carregou — tentando v3.11.174...');
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = function() { console.log('✅ PDFjs v3.11.174 carregado como fallback'); };
+      s.onerror = function() { console.error('❌ PDFjs v3 também falhou. Sem rede?'); };
+      document.head.appendChild(s);
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.js"
+          onerror="_pdfFallback()"></script>
 
   <!-- Scripts da aplicação -->
   <script src="js/utils.js"></script>
